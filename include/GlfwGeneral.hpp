@@ -21,11 +21,11 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // 是否允许调整窗口大小
     glfwWindowHint(GLFW_RESIZABLE, isResizable);
-
     // 当前显示器的指针
     pMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
-    pWindow = fullScreen ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr) : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
+    pWindow = fullScreen ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr)
+                         : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
 
     if (!pWindow) {
         std::cout << std::format("[ InitializeWindow ]\nFailed to create a glfw window!\n");
@@ -60,7 +60,13 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
     }
     graphicsBase::Base().Surface(surface);
 
-    if (graphicsBase::Base().GetPhysicalDevices() || graphicsBase::Base().DeterminePhysicalDevice(0, true, false) || graphicsBase::Base().CreateDevice()) {
+    // 创建逻辑设备
+    if (graphicsBase::Base().GetPhysicalDevices() || graphicsBase::Base().DeterminePhysicalDevice(0, true, false) ||
+        graphicsBase::Base().CreateDevice()) {
+        return false;
+    }
+    // 创建交换链
+    if (graphicsBase::Base().CreateSwapchain(limitFrameRate)) {
         return false;
     }
 
@@ -68,7 +74,7 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
 }
 
 void TerminateWindow() {
-    glfwDestroyWindow(pWindow);
+    vulkan::graphicsBase::Base().WaitIdle();
     glfwTerminate();
 }
 
