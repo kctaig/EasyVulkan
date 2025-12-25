@@ -52,7 +52,7 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
 
     // 创建Window Surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    if (VkResult result = glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
+    if (result_t result = glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
         std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result));
 
         glfwTerminate();

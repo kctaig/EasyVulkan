@@ -5,6 +5,50 @@
 namespace vulkan {
 constexpr VkExtent2D defaultWindowSize = {1280, 720};
 
+// 情况1：根据函数返回值确定是否抛出异常
+#ifdef VK_RESULT_THROW
+class result_t {
+    VkResult result;
+
+   public:
+    // 静态函数指针成员变量
+    static void (*callback_throw)(VkResult);
+    result_t(VkResult result) : result(result) {}
+    // 防止重复处理错误：错误从一个对象传递到另一个对象时，原对象的错误状态被清除
+    result_t(result_t&& other) noexcept : result(other.result) { other.result = VK_SUCCESS; }
+    // 防止错误没有被处理
+    ~result_t() noexcept(false) {
+        if (static_cast<uint32_t>(result) < VK_RESULT_MAX_ENUM) return;
+        if (callback_throw) {
+            callback_throw(result);
+        }
+        throw result;
+    };
+    // operator VkResult() : 表示转换为VkResult类型的运算符
+    operator VkResult() {
+        VkResult result = this->result;
+        this->result = VK_SUCCESS;
+        return result;
+    }
+};
+inline void (*result_t::callback_throw)(VkResult);
+
+// 情况2：若抛弃返回值，让编译器发出警告
+#elifdef VK_RESULT_NODISCARD
+struct [[nodiscard]] result_t {
+    VkResult result;
+    result_t(VkResult result) : result(result) {}
+    operator VkResult() const { return result; }
+};
+
+#pragma warning(disable : 4834)  // 禁用“丢弃返回值”的警告
+#pragma warning(disable : 6031)  // 禁用“忽略返回值”的警告
+
+// 情况3：啥也不干
+#else
+using result_t = VkResult;
+#endif
+
 class graphicsBase {
    private:
     static graphicsBase singleton;
@@ -87,7 +131,7 @@ class graphicsBase {
         container.push_back(name);
     }
 
-    VkResult CreateDebugMessenger() {
+    result_t CreateDebugMessenger() {
         // 设置调试回调函数
         static PFN_vkDebugUtilsMessengerCallbackEXT DebugUtilsMessengerCallback =
             [](VkDebugUtilsMessageSeverityFlagBitsEXT meeeageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -108,7 +152,7 @@ class graphicsBase {
             vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
         // 创建调试信使
         if (vkCreateDebugUtilsMessenger) {
-            VkResult result = vkCreateDebugUtilsMessenger(instance, &debugUtilsMessengerCreateInfo, nullptr, &debugMessenger);
+            result_t result = vkCreateDebugUtilsMessenger(instance, &debugUtilsMessengerCreateInfo, nullptr, &debugMessenger);
             if (result) {
                 std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a debug messenger!\nError code: {}\n",
                                          static_cast<int32_t>(result));
@@ -120,7 +164,7 @@ class graphicsBase {
     }
 
     // 检查并取得所需的队列簇索引
-    VkResult GetQueueFamilyIndices(VkPhysicalDevice physicalDevice) {
+    result_t GetQueueFamilyIndices(VkPhysicalDevice physicalDevice) {
         // 获取物理设备的队列簇属性
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -133,7 +177,7 @@ class graphicsBase {
                      supportCompute = queueFamilyProertieses[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
             // 只在创建了window surface 时获取支持呈现的队列簇索引
             if (surface) {
-                if (VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &suppoortPresentation)) {
+                if (result_t result = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &suppoortPresentation)) {
                     std::cout << std::format(
                         "[ graphicsBase ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n",
                         static_cast<int32_t>(result));
@@ -149,21 +193,21 @@ class graphicsBase {
         return VK_RESULT_MAX_ENUM;
     }
 
-    VkResult CreateSwapchain_Internal() {
+    result_t CreateSwapchain_Internal() {
         // 创建交换链
-        if (VkResult result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain)) {
+        if (result_t result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a swapchain!\nError code: {}\n", static_cast<int32_t>(result));
             return result;
         }
         // 获取交换链图像
         uint32_t swapchainImageCount;
-        if (VkResult result = vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr)) {
+        if (result_t result = vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of swapchain images!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
         }
         swapchainImages.resize(swapchainImageCount);
-        if (VkResult result = vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data())) {
+        if (result_t result = vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data())) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get swapchain images!\nError code: {}\n", static_cast<int32_t>(result));
             return result;
         }
@@ -178,7 +222,7 @@ class graphicsBase {
         };
         for (size_t i = 0; i < swapchainImageCount; i++) {
             imageViewCreateInfo.image = swapchainImages[i];
-            if (VkResult result = vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i])) {
+            if (result_t result = vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i])) {
                 std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a swapchain image view!\nError code: {}\n",
                                          static_cast<int32_t>(result));
                 return result;
@@ -227,8 +271,8 @@ class graphicsBase {
     void AddCallback_CreateDevice(void (*function)()) { callbacks_createDevice.push_back(function); }
     void AddCallback_DestroyDevice(void (*function)()) { callbacks_destroyDevice.push_back(function); }
 
-    VkResult WaitIdle() const {
-        VkResult result = vkDeviceWaitIdle(device);
+    result_t WaitIdle() const {
+        result_t result = vkDeviceWaitIdle(device);
         if (result) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to wait for the device to be idle!\nError code: {}\n",
                                      static_cast<int32_t>(result));
@@ -254,7 +298,7 @@ class graphicsBase {
     void AddInstanceExtension(const char* extensionName) { AddLayerOrExtension(instanceExtensions, extensionName); }
 
     // 创建Vulkan实例
-    VkResult CreateInstance(VkInstanceCreateFlags flags = 0) {
+    result_t CreateInstance(VkInstanceCreateFlags flags = 0) {
         // 在调试模式下，默认启用验证层和调试扩展
 #ifndef NDEBUG
         AddInstanceLayer("VK_LAYER_KHRONOS_validation");
@@ -273,7 +317,7 @@ class graphicsBase {
             .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
             .ppEnabledExtensionNames = instanceExtensions.data(),
         };
-        if (VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &instance)) {
+        if (result_t result = vkCreateInstance(&instanceCreateInfo, nullptr, &instance)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a vulkan instance!\nError code: {}\n", static_cast<uint32_t>(result));
             return result;
         }
@@ -284,17 +328,17 @@ class graphicsBase {
     }
 
     // 创建Vulkan实例失败后，检查所需的层是否可用
-    VkResult CheckInstanceLayers(std::span<const char*> layersToCheck) {
+    result_t CheckInstanceLayers(std::span<const char*> layersToCheck) {
         uint32_t layerCount = 0;
         std::vector<VkLayerProperties> availableLayers;
-        if (const VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr)) {
+        if (const result_t result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of instance layers!\n");
             return result;
         }
 
         if (layerCount) {
             availableLayers.resize(layerCount);
-            if (const VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data())) {
+            if (const result_t result = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data())) {
                 std::cout << std::format("[ graphicsBase ] ERROR\nFailed to enumerate instance layer properties!\nError code: {}\n",
                                          static_cast<uint32_t>(result));
                 return result;
@@ -315,10 +359,10 @@ class graphicsBase {
         return VK_SUCCESS;
     }
 
-    VkResult CheckInstanceExtensions(std::span<const char*> extensionsToCheck, const char* layerName = nullptr) const {
+    result_t CheckInstanceExtensions(std::span<const char*> extensionsToCheck, const char* layerName = nullptr) const {
         uint32_t extensionCount;
         std::vector<VkExtensionProperties> availableExtensions;
-        if (const VkResult result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr)) {
+        if (const result_t result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr)) {
             layerName
                 ? std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of instance extensions!\nLayer name:{}\n", layerName)
                 : std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of instance extensions!\n");
@@ -326,7 +370,7 @@ class graphicsBase {
         }
         if (extensionCount) {
             availableExtensions.resize(extensionCount);
-            if (const VkResult result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, availableExtensions.data())) {
+            if (const result_t result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, availableExtensions.data())) {
                 std::cout << std::format("[ graphicsBase ] ERROR\nFailed to enumerate instance extension properties!\nError code: {}\n",
                                          static_cast<uint32_t>(result));
                 return result;
@@ -357,16 +401,16 @@ class graphicsBase {
     void AddDeviceExtension(const char* extensionName) { AddLayerOrExtension(deviceExtensions, extensionName); }
 
     // 获取物理设备
-    VkResult GetPhysicalDevices() {
+    result_t GetPhysicalDevices() {
         uint32_t deviceCount;
-        if (VkResult result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr)) {
+        if (result_t result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr)) {
             return result;
         }
         if (!deviceCount) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to find any physical device supports vulkan!\n"), abort();
         }
         availablePhysicalDevices.resize(deviceCount);
-        VkResult result = vkEnumeratePhysicalDevices(instance, &deviceCount, availablePhysicalDevices.data());
+        result_t result = vkEnumeratePhysicalDevices(instance, &deviceCount, availablePhysicalDevices.data());
         if (result) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", static_cast<int32_t>(result));
         }
@@ -374,7 +418,7 @@ class graphicsBase {
     }
 
     // 选择物理设备，并获得所需的队列族索引
-    VkResult DeterminePhysicalDevice(uint32_t deviceIndex = 0, bool enableGraphicsQueue = true, bool enableComputeQueue = true) {
+    result_t DeterminePhysicalDevice(uint32_t deviceIndex = 0, bool enableGraphicsQueue = true, bool enableComputeQueue = true) {
         // 定义一个特殊值用于标记一个队列簇索引已被找过但是为找到
         static constexpr uint32_t notFound = INT32_MAX;
         static std::vector<uint32_t> queueFamilyIndices(availablePhysicalDevices.size());
@@ -385,7 +429,7 @@ class graphicsBase {
 
         // 如果队列簇索引被获取但还未被找到
         if (queueFamilyIndices[deviceIndex] == VK_QUEUE_FAMILY_IGNORED) {
-            VkResult result = GetQueueFamilyIndices(availablePhysicalDevices[deviceIndex]);
+            result_t result = GetQueueFamilyIndices(availablePhysicalDevices[deviceIndex]);
             if (result) {
                 if (result == VK_RESULT_MAX_ENUM) {
                     queueFamilyIndices[deviceIndex] = notFound;
@@ -404,7 +448,7 @@ class graphicsBase {
     }
 
     // 创建逻辑设备，并获得队列
-    VkResult CreateDevice(VkDeviceCreateFlags flags = 0) {
+    result_t CreateDevice(VkDeviceCreateFlags flags = 0) {
         float queuePriority = 1.0f;
         VkDeviceQueueCreateInfo queueCreateInfos[3] = {
             {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueCount = 1, .pQueuePriorities = &queuePriority},
@@ -436,7 +480,7 @@ class graphicsBase {
             .pEnabledFeatures = &physicalDeviceFeatures,
         };
 
-        if (VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device)) {
+        if (result_t result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
@@ -462,13 +506,13 @@ class graphicsBase {
     }
 
     // 创建逻辑设备失败后，检查所需的扩展是否可用
-    VkResult CheckDeviceExtensions(std::span<const char*>& extensionsToCheck, const char* layerName = nullptr) const {}
+    result_t CheckDeviceExtensions(std::span<const char*>& extensionsToCheck, const char* layerName = nullptr) const {}
 
     void DeviceExtensions(const std::vector<const char*>& extensionNames) { deviceExtensions = extensionNames; }
 
-    VkResult GetSurfaceFormats() {
+    result_t GetSurfaceFormats() {
         uint32_t surfaceFormatCount;
-        if (VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, nullptr)) {
+        if (result_t result = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, nullptr)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of surface formats!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
@@ -477,14 +521,14 @@ class graphicsBase {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to find any supported surface format!\n"), abort();
         }
         availableSurfaceFormats.resize(surfaceFormatCount);
-        VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, availableSurfaceFormats.data());
+        result_t result = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, availableSurfaceFormats.data());
         if (result) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get surface formats!\nError code: {}\n", static_cast<int32_t>(result));
         }
         return result;
     }
 
-    VkResult SetSurfaceFormat(VkSurfaceFormatKHR surfaceFormat) {
+    result_t SetSurfaceFormat(VkSurfaceFormatKHR surfaceFormat) {
         bool formatIsAvailable = false;
         if (!surfaceFormat.format) {
             // 如果格式未指定，只匹配色彩空间，图像格式则选择第一个可用格式
@@ -518,9 +562,9 @@ class graphicsBase {
     }
 
     // 创建交换链
-    VkResult CreateSwapchain(bool limitFrameRate = true, VkSwapchainCreateFlagsKHR flags = 0) {
+    result_t CreateSwapchain(bool limitFrameRate = true, VkSwapchainCreateFlagsKHR flags = 0) {
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
+        if (result_t result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
@@ -560,7 +604,7 @@ class graphicsBase {
         }
         // 指定图像格式
         if (availableSurfaceFormats.empty()) {
-            if (VkResult result = GetSurfaceFormats()) {
+            if (result_t result = GetSurfaceFormats()) {
                 return result;
             }
         }
@@ -575,7 +619,7 @@ class graphicsBase {
 
         // 指定呈现模式
         uint32_t surfacePresentModeCount;
-        if (VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &surfacePresentModeCount, nullptr)) {
+        if (result_t result = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &surfacePresentModeCount, nullptr)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of surface present modes!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
@@ -584,7 +628,7 @@ class graphicsBase {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to find any surface present mode!\n"), abort();
         }
         std::vector<VkPresentModeKHR> surfacePresentModes(surfacePresentModeCount);
-        if (VkResult result =
+        if (result_t result =
                 vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &surfacePresentModeCount, surfacePresentModes.data())) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get surface present modes!\nError code: {}\n", static_cast<int32_t>(result));
         }
@@ -606,16 +650,16 @@ class graphicsBase {
         swapchainCreateInfo.clipped = VK_TRUE;
 
         // 创建交换链
-        if (VkResult result = CreateSwapchain_Internal()) {
+        if (result_t result = CreateSwapchain_Internal()) {
             return result;
         }
         ExecuteCallbacks(callbacks_createSwapchain);
         return VK_SUCCESS;
     }
 
-    VkResult RecreateSwapchain() {
+    result_t RecreateSwapchain() {
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
+        if (result_t result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
             std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n",
                                      static_cast<int32_t>(result));
             return result;
@@ -626,7 +670,7 @@ class graphicsBase {
         swapchainCreateInfo.imageExtent = surfaceCapabilities.currentExtent;
         swapchainCreateInfo.oldSwapchain = swapchain;
 
-        VkResult result = vkQueueWaitIdle(queue_graphics);
+        result_t result = vkQueueWaitIdle(queue_graphics);
         // 仅在等待图形队列成功，且图形与呈现所用队列不同时等待呈现队列
         if (!result && queue_graphics != queue_presentation) {
             result = vkQueueWaitIdle(queue_presentation);
