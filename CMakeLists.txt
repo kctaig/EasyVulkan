@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 
 set(PROJECT_NAME "Easy_Vulkan")
-project(${PROJECT_NAME})
-set(CMAKE_CXX_STANDARD 20)
+project(${PROJECT_NAME} LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
