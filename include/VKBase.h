@@ -3,9 +3,9 @@
 #include "EasyVKStart.h"
 #define VK_RESULT_THROW
 
-#define DestroyhandelBy(Func)                             \
+#define DestroyHandleBy(Func)                             \
     if (handle) {                                         \
-        Func(graphics::Base().Device(), handle, nullptr); \
+        Func(graphicsBase::Base().Device(), handle, nullptr); \
         handle = VK_NULL_HANDLE;                          \
     }
 
