@@ -1,3 +1,5 @@
+#pragma once
+
 #include "VKBase.h"
 
 #define GLFW_INCLUDE_VULKAN
