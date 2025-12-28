@@ -3,10 +3,10 @@
 #include "EasyVKStart.h"
 #define VK_RESULT_THROW
 
-#define DestroyHandleBy(Func)                             \
-    if (handle) {                                         \
+#define DestroyHandleBy(Func)                                 \
+    if (handle) {                                             \
         Func(graphicsBase::Base().Device(), handle, nullptr); \
-        handle = VK_NULL_HANDLE;                          \
+        handle = VK_NULL_HANDLE;                              \
     }
 
 #define MoveHandle         \
@@ -723,6 +723,86 @@ class graphicsBase {
 
     // 静态函数、用于访问单例
     static graphicsBase& Base() { return singleton; }
+};
+
+class fence {
+    VkFence handle = VK_NULL_HANDLE;
+
+   public:
+    // fence() = default;
+    fence(VkFenceCreateInfo& createInfo) { Create(createInfo); }
+    fence(VkFenceCreateFlags flags = 0) { Create(flags); }
+    fence(fence&& other) noexcept { MoveHandle; }
+    ~fence() { DestroyHandleBy(vkDestroyFence); }
+    // Gettter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Const function
+    result_t Wait() const {
+        VkResult result = vkWaitForFences(graphicsBase::Base().Device(), 1, &handle, false, UINT64_MAX);
+        if (result) {
+            outStream << std::format("[ fence ] ERROR\nFailed to wait for the fence!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+    result_t Reset() const {
+        VkResult result = vkResetFences(graphicsBase::Base().Device(), 1, &handle);
+        if (result) {
+            outStream << std::format("[ fence ] ERROR\nFailed to reset the fence!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+    result_t WaitAndReset() const {
+        VkResult result = Wait();
+        result || (result = Reset());
+        return result;
+    }
+    result_t Status() const {
+        VkResult result = vkGetFenceStatus(graphicsBase::Base().Device(), handle);
+        if (result < 0) {
+            outStream << std::format("[ fence ] ERROR\nFailed to get the status of the fence!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+    // Non-const function
+    result_t Create(VkFenceCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        VkResult result = vkCreateFence(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result) {
+            outStream << std::format("[ fence ] ERROR\nFailed to create a fence!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+    result_t Create(VkFenceCreateFlags flags = 0) {
+        VkFenceCreateInfo createInfo = {.flags = flags};
+        return Create(createInfo);
+    }
+};
+
+class semaphore {
+    VkSemaphore handle = VK_NULL_HANDLE;
+
+   public:
+    semaphore(VkSemaphoreCreateInfo& createInfo) { Create(createInfo); }
+    semaphore(/*VkSemaphoreCreateFlags flags*/) { Create(); }
+    semaphore(semaphore&& other) noexcept { MoveHandle; }
+    ~semaphore() { DestroyHandleBy(vkDestroySemaphore); }
+    // Gettter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Non-const function
+    result_t Create(VkSemaphoreCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkResult result = vkCreateSemaphore(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result) {
+            outStream << std::format("[ semaphore ] ERROR\nFailed to create a semaphore!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+    result_t Create(/*VkSemaphoreCreateFlags flags = 0*/) {
+        VkSemaphoreCreateInfo createInfo = {};
+        return Create(createInfo);
+    }
 };
 
 inline graphicsBase graphicsBase::singleton;
