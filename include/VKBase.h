@@ -816,7 +816,8 @@ class graphicsBase {
             case VK_ERROR_OUT_OF_DATE_KHR:
                 return RecreateSwapchain();
             default:
-                outStream << std::format("[ graphicsBase ] ERROR\nFailed to queue the image for presentation!\nError code: {}\n", int32_t(result));
+                outStream << std::format("[ graphicsBase ] ERROR\nFailed to queue the image for presentation!\nError code: {}\n",
+                                         static_cast<int32_t>(result));
                 return result;
         }
     }
@@ -1009,6 +1010,71 @@ class commandPool {
     result_t Create(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) {
         VkCommandPoolCreateInfo createInfo = {.flags = flags, .queueFamilyIndex = queueFamilyIndex};
         return Create(createInfo);
+    }
+};
+
+class renderPass {
+    VkRenderPass handle = VK_NULL_HANDLE;
+
+   public:
+    renderPass() = default;
+    renderPass(VkRenderPassCreateInfo& createInfo) { Create(createInfo); }
+    renderPass(renderPass&& other) noexcept { MoveHandle; }
+    ~renderPass() { DestroyHandleBy(vkDestroyRenderPass); }
+    // Getter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Const function
+    void CmdBegin(VkCommandBuffer commandBuffer, VkRenderPassBeginInfo& beginInfo,
+                  VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) const {
+        beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        beginInfo.renderPass = handle;
+        vkCmdBeginRenderPass(commandBuffer, &beginInfo, subpassContents);
+    }
+    void CmdBegin(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer, VkRect2D renderArea, arrayRef<const VkClearValue> clearValues = {},
+                  VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) const {
+        VkRenderPassBeginInfo beginInfo = {.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                                           .renderPass = handle,
+                                           .framebuffer = framebuffer,
+                                           .renderArea = renderArea,
+                                           .clearValueCount = static_cast<uint32_t>(clearValues.Count()),
+                                           .pClearValues = clearValues.Pointer()};
+        vkCmdBeginRenderPass(commandBuffer, &beginInfo, subpassContents);
+    }
+    void CmdNext(VkCommandBuffer commandBuffer, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) const {
+        vkCmdNextSubpass(commandBuffer, subpassContents);
+    }
+    void CmdEnd(VkCommandBuffer commandBuffer) const { vkCmdEndRenderPass(commandBuffer); }
+    // Non-const function
+    result_t Create(VkRenderPassCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        VkResult result = vkCreateRenderPass(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result) {
+            outStream << std::format("[ renderPass ] ERROR\nFailed to create a render pass!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
+    }
+};
+
+class framebuffer {
+    VkFramebuffer handle = VK_NULL_HANDLE;
+
+   public:
+    framebuffer() = default;
+    framebuffer(VkFramebufferCreateInfo& createInfo) { Create(createInfo); }
+    framebuffer(framebuffer&& other) noexcept { MoveHandle; }
+    ~framebuffer() { DestroyHandleBy(vkDestroyFramebuffer); }
+    // Getter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Non-const function
+    result_t Create(VkFramebufferCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        VkResult result = vkCreateFramebuffer(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result) {
+            outStream << std::format("[ framebuffer ] ERROR\nFailed to create a framebuffer!\nError code: {}\n", static_cast<int32_t>(result));
+        }
+        return result;
     }
 };
 
