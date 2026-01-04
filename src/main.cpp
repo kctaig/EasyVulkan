@@ -50,27 +50,36 @@ int main() {
     CreateLayout();
     CreatePipeline();
 
-    fence fence;  // 以非置位状态创建fence
-    semaphore semaphore_imageIsAvailable;
-    semaphore semaphore_renderingIsOver;
-
-    commandBuffer commandBuffer;
+    struct perFrameObjects_t {
+        fence fence = {VK_FENCE_CREATE_SIGNALED_BIT};
+        semaphore semaphore_imageIsAvailable;
+        semaphore semaphore_renderingIsOver;
+        commandBuffer commandBuffer;
+    };
+    std::vector<perFrameObjects_t> perFrameObjects(graphicsBase::Base().SwapchainImageCount());
     commandPool commandPool(graphicsBase::Base().QueueFamilyIndex_Graphics(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    commandPool.AllocateBuffers(commandBuffer);
+    for (auto& i : perFrameObjects) {
+        commandPool.AllocateBuffers(i.commandBuffer);
+    }
+    uint32_t currentFrame = 0;
 
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
 
     while (!glfwWindowShouldClose(pWindow)) {
         while (glfwGetWindowAttrib(pWindow, GLFW_ICONIFIED)) glfwWaitEvents();
 
-        // 获取交换链图像索引
+        const auto& [fence, semaphore_imageIsAvailable, semaphore_renderingIsOver, commandBuffer] = perFrameObjects[currentFrame];
+
+        fence.WaitAndReset();
         graphicsBase::Base().SwapImage(semaphore_imageIsAvailable);
-        auto i = graphicsBase::Base().CurrentImageIndex();
+
+        // 获取交换链图像索引
+        auto imageIndex = graphicsBase::Base().CurrentImageIndex();
 
         commandBuffer.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         // 开始渲染通道
-        renderPass.CmdBegin(commandBuffer, framebuffers[i], {{}, windowSize}, clearColor);
-
+        renderPass.CmdBegin(commandBuffer, framebuffers[imageIndex], {{}, windowSize}, clearColor);
+        
         // 绑定图形管线并绘制三角形
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
         // 绘制三角形：3个顶点，1个实例，起始顶点索引0，起始实例索引0
@@ -83,10 +92,11 @@ int main() {
         graphicsBase::Base().SubmitCommandBuffer_Graphics(commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, fence);
         graphicsBase::Base().PresentImage(semaphore_renderingIsOver);
 
+        // Update current frame index
+        currentFrame = (currentFrame + 1) % graphicsBase::Base().SwapchainImageCount();
+
         glfwPollEvents();
         TitleFps();
-
-        fence.WaitAndReset();
     }
     TerminateWindow();
     return 0;
