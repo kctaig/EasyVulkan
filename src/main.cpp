@@ -6,7 +6,10 @@ using namespace vulkan;
 pipelineLayout pipelineLayout_triangle;
 pipeline pipeline_triangle;
 
-// 定义一个静态变量存储easyVulkan::CreateRpwf_Screen()返回值，确保只创建一次
+/**
+ * 定义一个静态变量存储easyVulkan::CreateRpwf_Screen()返回值，确保只创建一次
+ * 会有析构顺序问题，renderpass和framebuffer的析构会在main函数之后，此时device已经被销毁
+ */
 const auto& RenderPassAndFramebuffers() {
     static const auto& rpwf = easyVulkan::CreateRpwf_Screen();
     return rpwf;
@@ -50,16 +53,24 @@ int main() {
     CreateLayout();
     CreatePipeline();
 
-    struct perFrameObjects_t {
-        fence fence = {VK_FENCE_CREATE_SIGNALED_BIT};
+    /**
+     * semaphore_imageIsAvailable 是 per-frame 的：因为每次 acquire 都是新请求。
+     * 表示：通知 GPU 交换链中的某一张图像已经准备好，可以开始渲染了
+     * semaphore_renderingIsOver 是 per-image 的：确保每个图像有自己的“渲染完成”信号。
+     * 表示：通知 GPU 该交换链图像的渲染已经完成，可以进行展示
+     * 因此，semaphore_imageIsAvailable 和 semaphore_renderingIsOver 不能共用一个索引
+     */
+    struct PerFrame {
+        fence frameFence = {VK_FENCE_CREATE_SIGNALED_BIT}; // 确保每个帧在第一次提交时不会被阻塞
         semaphore semaphore_imageIsAvailable;
-        semaphore semaphore_renderingIsOver;
         commandBuffer commandBuffer;
     };
-    std::vector<perFrameObjects_t> perFrameObjects(graphicsBase::Base().SwapchainImageCount());
+    std::array<PerFrame, MAX_FRAMES_IN_FLIGHT> perFrame;
+    std::vector<semaphore> semaphore_renderingIsOvers(graphicsBase::Base().SwapchainImageCount());
+
     commandPool commandPool(graphicsBase::Base().QueueFamilyIndex_Graphics(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    for (auto& i : perFrameObjects) {
-        commandPool.AllocateBuffers(i.commandBuffer);
+    for (auto& frame : perFrame) {
+        commandPool.AllocateBuffers(frame.commandBuffer);
     }
     uint32_t currentFrame = 0;
 
@@ -68,18 +79,20 @@ int main() {
     while (!glfwWindowShouldClose(pWindow)) {
         while (glfwGetWindowAttrib(pWindow, GLFW_ICONIFIED)) glfwWaitEvents();
 
-        const auto& [fence, semaphore_imageIsAvailable, semaphore_renderingIsOver, commandBuffer] = perFrameObjects[currentFrame];
+        const auto& [frameFence, semaphore_imageIsAvailable, commandBuffer] = perFrame[currentFrame];
 
-        fence.WaitAndReset();
+        // 当前帧的渲染命令不会在前一帧执行完之前开始，因此等待栅栏
+        frameFence.WaitAndReset();
+
+        // 获取下一帧要渲染的交换链图像索引
         graphicsBase::Base().SwapImage(semaphore_imageIsAvailable);
-
-        // 获取交换链图像索引
         auto imageIndex = graphicsBase::Base().CurrentImageIndex();
+        auto& semaphore_renderingIsOver = semaphore_renderingIsOvers[imageIndex];
 
         commandBuffer.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         // 开始渲染通道
         renderPass.CmdBegin(commandBuffer, framebuffers[imageIndex], {{}, windowSize}, clearColor);
-        
+
         // 绑定图形管线并绘制三角形
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
         // 绘制三角形：3个顶点，1个实例，起始顶点索引0，起始实例索引0
@@ -89,11 +102,13 @@ int main() {
         renderPass.CmdEnd(commandBuffer);
         commandBuffer.End();
 
-        graphicsBase::Base().SubmitCommandBuffer_Graphics(commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, fence);
+        // 提交命令缓冲区到队列，GPU开始执行渲染命令
+        graphicsBase::Base().SubmitCommandBuffer_Graphics(commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, frameFence);
+        // GPU等待渲染完成信号量，然后展示图像
         graphicsBase::Base().PresentImage(semaphore_renderingIsOver);
 
-        // Update current frame index
-        currentFrame = (currentFrame + 1) % graphicsBase::Base().SwapchainImageCount();
+        // 更新下一帧索引
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
         glfwPollEvents();
         TitleFps();

@@ -15,6 +15,7 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
+#include <array>
 
 // GLM
 #define GLM_FORCE_DEPTH_ZEWRO_TO_ONE
@@ -31,6 +32,8 @@
 #endif
 
 #include <vulkan/vulkan.h>
+
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 template <typename T>
 class arrayRef {
