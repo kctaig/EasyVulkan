@@ -12,6 +12,11 @@ using namespace vulkan;
 struct renderPassWithFramebuffers {
     renderPass renderPass;
     std::vector<framebuffer> framebuffers;
+
+    ~renderPassWithFramebuffers() {
+        renderPass.~renderPass();
+        framebuffers.clear();
+    }
 };
 
 // 创建一个直接渲染到交换链图像，且不做深度测试等任何测试的渲染通道和对应的帧缓冲

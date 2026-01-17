@@ -6,13 +6,13 @@
 #include <GLFW/glfw3.h>
 
 // 窗口的指针
-GLFWwindow* pWindow;
+inline GLFWwindow* pWindow;
 // 显示器信息的指针
-GLFWmonitor* pMonitor;
+inline GLFWmonitor* pMonitor;
 // 窗口标题
-const char* windowTitle = "EasyVK";
+inline auto windowTitle = "EasyVK";
 
-bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = true) {
+inline bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = true) {
     using namespace vulkan;
     if (!glfwInit()) {
         std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize GLFW!\n");
@@ -75,12 +75,12 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
     return true;
 }
 
-void TerminateWindow() {
-    vulkan::graphicsBase::Base().WaitIdle();
+inline void TerminateWindow() {
+    graphicsBase::Base().WaitIdle();
     glfwTerminate();
 }
 
-void TitleFps() {
+inline void TitleFps() {
     static double time0 = glfwGetTime();
     static double time1;
     static double dt;

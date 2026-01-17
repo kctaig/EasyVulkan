@@ -3,6 +3,11 @@
 
 using namespace vulkan;
 
+struct vertex {
+    glm::vec2 position;
+    glm::vec4 color;
+};
+
 pipelineLayout pipelineLayout_triangle;
 pipeline pipeline_triangle;
 
@@ -21,8 +26,8 @@ void CreateLayout() {
 }
 
 void CreatePipeline() {
-    static shaderModule vert("../shader/FirstTriangle.vert.spv");
-    static shaderModule frag("../shader/FirstTriangle.frag.spv");
+    static shaderModule vert("../shader/VertexBuffer.vert.spv");
+    static shaderModule frag("../shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shaderStageCreateInfos_triangles[2] = {vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT),
                                                                                   frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT)};
     auto Create = [] {
@@ -30,6 +35,15 @@ void CreatePipeline() {
         pipelineCiPack.createInfo.layout = pipelineLayout_triangle;
         pipelineCiPack.createInfo.renderPass = RenderPassAndFramebuffers().renderPass;
         pipelineCiPack.inputAssemblyStateCi.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        // 数据来自0号顶点缓冲区，逐顶点输入
+        pipelineCiPack.vertexInputBindings.emplace_back(0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX);
+        /*
+         * location=0,对应 layout(location = 0) in
+         * bingding=0,表还数据来自0号顶点缓冲区，
+         * vec3对应VK_FORMAT_R32G32B32A32_SFLOAT，用offsetof计算color在vertex中的起始位置
+         */
+        pipelineCiPack.vertexInputAttributes.emplace_back(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position));
+        pipelineCiPack.vertexInputAttributes.emplace_back(1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex, color));
         pipelineCiPack.viewports.emplace_back(0.f, 0.f, float(windowSize.width), float(windowSize.height), 0.f, 1.f);
         pipelineCiPack.scissors.emplace_back(VkOffset2D{}, windowSize);
         pipelineCiPack.multisampleStateCi.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -61,7 +75,7 @@ int main() {
      * 因此，semaphore_imageIsAvailable 和 semaphore_renderingIsOver 不能共用一个索引
      */
     struct PerFrame {
-        fence frameFence = {VK_FENCE_CREATE_SIGNALED_BIT}; // 确保每个帧在第一次提交时不会被阻塞
+        fence frameFence = {VK_FENCE_CREATE_SIGNALED_BIT};  // 确保每个帧在第一次提交时不会被阻塞
         semaphore semaphore_imageIsAvailable;
         commandBuffer commandBuffer;
     };
@@ -76,6 +90,17 @@ int main() {
 
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
 
+    vertex vertices[] = {
+        {{.0f, -.5f}, {1, 0, 0, 1}},  // 红色
+        {{-.5f, .5f}, {0, 1, 0, 1}},  // 绿色
+        {{.5f, .5f}, {0, 0, 1, 1}}    // 蓝色
+    };
+    // 创建缓冲区,分配物理内存并绑定
+    vertexBuffer vertexBuffer(sizeof vertices);
+    // 将数据从CPU传输到GPU缓冲区中的映射内存
+    vertexBuffer.TransferData(vertices);
+
+    // render loop
     while (!glfwWindowShouldClose(pWindow)) {
         while (glfwGetWindowAttrib(pWindow, GLFW_ICONIFIED)) glfwWaitEvents();
 
@@ -93,8 +118,13 @@ int main() {
         // 开始渲染通道
         renderPass.CmdBegin(commandBuffer, framebuffers[imageIndex], {{}, windowSize}, clearColor);
 
+        // 绑定顶点缓冲区，0号绑定点
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffer.Address(), &offset);
+
         // 绑定图形管线并绘制三角形
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
+
         // 绘制三角形：3个顶点，1个实例，起始顶点索引0，起始实例索引0
         vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
