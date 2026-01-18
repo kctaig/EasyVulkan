@@ -138,9 +138,7 @@ class graphicsBase {
                 reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
                     vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT")
                 );
-            if (vkDestroyDebugUitlsMessenger) {
-                vkDestroyDebugUitlsMessenger(instance, debugMessenger, nullptr);
-            }
+            if (vkDestroyDebugUitlsMessenger) { vkDestroyDebugUitlsMessenger(instance, debugMessenger, nullptr); }
         }
         vkDestroyInstance(instance, nullptr);
     }
@@ -156,18 +154,16 @@ class graphicsBase {
     result_t CreateDebugMessenger() {
         // 设置调试回调函数
         static PFN_vkDebugUtilsMessengerCallbackEXT DebugUtilsMessengerCallback =
-            [](VkDebugUtilsMessageSeverityFlagBitsEXT meeeageSeverity,
-               VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-               void* pUserData) -> VkBool32 {
+            [](VkDebugUtilsMessageSeverityFlagBitsEXT meeeageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) -> VkBool32 {
             outStream << std::format("{}\n\n", pCallbackData->pMessage);
             return VK_FALSE;
         };
         // 创建调试信使结构体，只关心警告和错误信息
         VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+            .messageSeverity =
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
             .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
@@ -181,9 +177,8 @@ class graphicsBase {
             );
         // 创建调试信使
         if (vkCreateDebugUtilsMessenger) {
-            VkResult result = vkCreateDebugUtilsMessenger(
-                instance, &debugUtilsMessengerCreateInfo, nullptr, &debugMessenger
-            );
+            VkResult result =
+                vkCreateDebugUtilsMessenger(instance, &debugUtilsMessengerCreateInfo, nullptr, &debugMessenger);
             if (result) {
                 outStream << std::format(
                     "[ graphicsBase ] ERROR\nFailed to create a debug messenger!\nError code: {}\n",
@@ -206,9 +201,7 @@ class graphicsBase {
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
         if (!queueFamilyCount) return VK_RESULT_MAX_ENUM;
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(
-            physicalDevice, &queueFamilyCount, queueFamilyProperties.data()
-        );
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
         // 查找所需的队列簇
         for (uint32_t i = 0; i < queueFamilyCount; i++) {
             VkBool32 supportGraphics = queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT,
@@ -216,9 +209,8 @@ class graphicsBase {
                      supportCompute = queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
             // 只在创建了window surface 时获取支持呈现的队列簇索引
             if (surface) {
-                if (VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(
-                        physicalDevice, i, surface, &supportPresentation
-                    )) {
+                if (VkResult result =
+                        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportPresentation)) {
                     outStream << std::format(
                         "[ graphicsBase ] ERROR\nFailed to determine if the queue family supports "
                         "presentation!\nError code: {}\n",
@@ -238,18 +230,15 @@ class graphicsBase {
 
     result_t CreateSwapchain_Internal() {
         // 创建交换链
-        if (VkResult result =
-                vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain)) {
+        if (VkResult result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain)) {
             outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to create a swapchain!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ graphicsBase ] ERROR\nFailed to create a swapchain!\nError code: {}\n", static_cast<int32_t>(result)
             );
             return result;
         }
         // 获取交换链图像
         uint32_t swapchainImageCount;
-        if (VkResult result =
-                vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr)) {
+        if (VkResult result = vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr)) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get the count of swapchain images!\nError code: "
                 "{}\n",
@@ -258,9 +247,8 @@ class graphicsBase {
             return result;
         }
         swapchainImages.resize(swapchainImageCount);
-        if (VkResult result = vkGetSwapchainImagesKHR(
-                device, swapchain, &swapchainImageCount, swapchainImages.data()
-            )) {
+        if (VkResult result =
+                vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data())) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get swapchain images!\nError code: {}\n",
                 static_cast<int32_t>(result)
@@ -278,9 +266,7 @@ class graphicsBase {
         };
         for (size_t i = 0; i < swapchainImageCount; i++) {
             imageViewCreateInfo.image = swapchainImages[i];
-            if (VkResult result = vkCreateImageView(
-                    device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i]
-                )) {
+            if (VkResult result = vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i])) {
                 outStream << std::format(
                     "[ graphicsBase ] ERROR\nFailed to create a swapchain image view!\nError code: "
                     "{}\n",
@@ -311,15 +297,11 @@ class graphicsBase {
     const std::vector<const char*>& InstanceExtensions() const { return instanceExtensions; }
     VkSurfaceKHR Surface() const { return surface; }
     VkPhysicalDevice PhysicalDevice() const { return physicalDevice; }
-    const VkPhysicalDeviceProperties& PhysicalDeviceProperties() const {
-        return physicalDeviceProperties;
-    }
+    const VkPhysicalDeviceProperties& PhysicalDeviceProperties() const { return physicalDeviceProperties; }
     const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties() const {
         return physicalDeviceMemoryProperties;
     }
-    VkPhysicalDevice AvailablePhysicalDevice(uint32_t index) const {
-        return availablePhysicalDevices[index];
-    }
+    VkPhysicalDevice AvailablePhysicalDevice(uint32_t index) const { return availablePhysicalDevices[index]; }
     VkDevice Device() const { return device; }
     const std::vector<const char*>& DeviceExtensions() const { return deviceExtensions; }
     uint32_t QueueFamilyIndex_Graphics() const { return queueFamilyIndex_graphics; }
@@ -328,37 +310,23 @@ class graphicsBase {
     VkQueue Queue_Graphics() const { return queue_graphics; }
     VkQueue Queue_Presentation() const { return queue_presentation; }
     VkQueue Queue_Compute() const { return queue_compute; }
-    const VkFormat& AvailableSurfaceFormat(const uint32_t index) const {
-        return availableSurfaceFormats[index].format;
-    }
+    const VkFormat& AvailableSurfaceFormat(const uint32_t index) const { return availableSurfaceFormats[index].format; }
     const VkColorSpaceKHR& AvailableSurfaceColorSpace(const uint32_t index) const {
         return availableSurfaceFormats[index].colorSpace;
     }
-    uint32_t AvailableSurfaceFormatCount() const {
-        return static_cast<uint32_t>(availableSurfaceFormats.size());
-    }
+    uint32_t AvailableSurfaceFormatCount() const { return static_cast<uint32_t>(availableSurfaceFormats.size()); }
     VkSwapchainKHR Swapchain() const { return swapchain; }
     VkImage SwapchainImage(const uint32_t index) const { return swapchainImages[index]; }
-    VkImageView SwapchainImageView(const uint32_t index) const {
-        return swapchainImageViews[index];
-    }
+    VkImageView SwapchainImageView(const uint32_t index) const { return swapchainImageViews[index]; }
     uint32_t SwapchainImageCount() const { return static_cast<uint32_t>(swapchainImages.size()); }
     const VkSwapchainCreateInfoKHR& SwapchainCreateInfo() const { return swapchainCreateInfo; }
     uint32_t CurrentImageIndex() const { return currentImageIndex; }
 
     // 添加回调函数
-    void AddCallback_CreateSwapchain(void (*function)()) {
-        callbacks_createSwapchain.push_back(function);
-    }
-    void AddCallback_DestroySwapchain(void (*function)()) {
-        callbacks_destroySwapchain.push_back(function);
-    }
-    void AddCallback_CreateDevice(void (*function)()) {
-        callbacks_createDevice.push_back(function);
-    }
-    void AddCallback_DestroyDevice(void (*function)()) {
-        callbacks_destroyDevice.push_back(function);
-    }
+    void AddCallback_CreateSwapchain(void (*function)()) { callbacks_createSwapchain.push_back(function); }
+    void AddCallback_DestroySwapchain(void (*function)()) { callbacks_destroySwapchain.push_back(function); }
+    void AddCallback_CreateDevice(void (*function)()) { callbacks_createDevice.push_back(function); }
+    void AddCallback_DestroyDevice(void (*function)()) { callbacks_destroyDevice.push_back(function); }
 
     result_t WaitIdle() const {
         VkResult result = vkDeviceWaitIdle(device);
@@ -387,9 +355,7 @@ class graphicsBase {
 
     // 以下函数用于创建Vulkan实例前
     void AddInstanceLayer(const char* layerName) { AddLayerOrExtension(instanceLayers, layerName); }
-    void AddInstanceExtension(const char* extensionName) {
-        AddLayerOrExtension(instanceExtensions, extensionName);
-    }
+    void AddInstanceExtension(const char* extensionName) { AddLayerOrExtension(instanceExtensions, extensionName); }
 
     // 创建Vulkan实例
     result_t CreateInstance(VkInstanceCreateFlags flags = 0) {
@@ -428,16 +394,13 @@ class graphicsBase {
         uint32_t layerCount = 0;
         std::vector<VkLayerProperties> availableLayers;
         if (const VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr)) {
-            outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to get the count of instance layers!\n"
-            );
+            outStream << std::format("[ graphicsBase ] ERROR\nFailed to get the count of instance layers!\n");
             return result;
         }
 
         if (layerCount) {
             availableLayers.resize(layerCount);
-            if (const VkResult result =
-                    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data())) {
+            if (const VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data())) {
                 outStream << std::format(
                     "[ graphicsBase ] ERROR\nFailed to enumerate instance layer properties!\nError "
                     "code: {}\n",
@@ -461,29 +424,23 @@ class graphicsBase {
         return VK_SUCCESS;
     }
 
-    result_t CheckInstanceExtensions(
-        std::span<const char*> extensionsToCheck, const char* layerName = nullptr
-    ) const {
+    result_t CheckInstanceExtensions(std::span<const char*> extensionsToCheck, const char* layerName = nullptr) const {
         uint32_t extensionCount;
         std::vector<VkExtensionProperties> availableExtensions;
-        if (const VkResult result =
-                vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr)) {
+        if (const VkResult result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr)) {
             layerName
                 ? outStream << std::format(
                       "[ graphicsBase ] ERROR\nFailed to get the count of instance "
                       "extensions!\nLayer name:{}\n",
                       layerName
                   )
-                : outStream << std::format(
-                      "[ graphicsBase ] ERROR\nFailed to get the count of instance extensions!\n"
-                  );
+                : outStream << std::format("[ graphicsBase ] ERROR\nFailed to get the count of instance extensions!\n");
             return result;
         }
         if (extensionCount) {
             availableExtensions.resize(extensionCount);
-            if (const VkResult result = vkEnumerateInstanceExtensionProperties(
-                    layerName, &extensionCount, availableExtensions.data()
-                )) {
+            if (const VkResult result =
+                    vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, availableExtensions.data())) {
                 outStream << std::format(
                     "[ graphicsBase ] ERROR\nFailed to enumerate instance extension "
                     "properties!\nError code: {}\n",
@@ -506,9 +463,7 @@ class graphicsBase {
     }
 
     void InstanceLayers(const std::vector<const char*>& layerNames) { instanceLayers = layerNames; }
-    void InstanceExtensions(const std::vector<const char*>& extensionNames) {
-        instanceExtensions = extensionNames;
-    }
+    void InstanceExtensions(const std::vector<const char*>& extensionNames) { instanceExtensions = extensionNames; }
 
     // 该函数用于选择物理设备前
     void Surface(VkSurfaceKHR surface) {
@@ -516,25 +471,18 @@ class graphicsBase {
     }
 
     // 用于创建逻辑设备前
-    void AddDeviceExtension(const char* extensionName) {
-        AddLayerOrExtension(deviceExtensions, extensionName);
-    }
+    void AddDeviceExtension(const char* extensionName) { AddLayerOrExtension(deviceExtensions, extensionName); }
 
     // 获取物理设备
     result_t GetPhysicalDevices() {
         uint32_t deviceCount;
-        if (VkResult result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr)) {
-            return result;
-        }
+        if (VkResult result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr)) { return result; }
         if (!deviceCount) {
-            outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to find any physical device supports vulkan!\n"
-            ),
+            outStream << std::format("[ graphicsBase ] ERROR\nFailed to find any physical device supports vulkan!\n"),
                 abort();
         }
         availablePhysicalDevices.resize(deviceCount);
-        VkResult result =
-            vkEnumeratePhysicalDevices(instance, &deviceCount, availablePhysicalDevices.data());
+        VkResult result = vkEnumeratePhysicalDevices(instance, &deviceCount, availablePhysicalDevices.data());
         if (result) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n",
@@ -565,8 +513,7 @@ class graphicsBase {
             }
         } else {
             queueFamilyIndex_graphics = queueFamilyIndex_compute = queueFamilyIndices[deviceIndex];
-            queueFamilyIndex_presentation =
-                surface ? queueFamilyIndices[deviceIndex] : VK_QUEUE_FAMILY_IGNORED;
+            queueFamilyIndex_presentation = surface ? queueFamilyIndices[deviceIndex] : VK_QUEUE_FAMILY_IGNORED;
         }
 
         physicalDevice = availablePhysicalDevices[deviceIndex];
@@ -577,15 +524,9 @@ class graphicsBase {
     result_t CreateDevice(VkDeviceCreateFlags flags = 0) {
         float queuePriority = 1.0f;
         VkDeviceQueueCreateInfo queueCreateInfos[3] = {
-            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-             .queueCount = 1,
-             .pQueuePriorities = &queuePriority},
-            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-             .queueCount = 1,
-             .pQueuePriorities = &queuePriority},
-            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-             .queueCount = 1,
-             .pQueuePriorities = &queuePriority}
+            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueCount = 1, .pQueuePriorities = &queuePriority},
+            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueCount = 1, .pQueuePriorities = &queuePriority},
+            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueCount = 1, .pQueuePriorities = &queuePriority}
         };
         uint32_t queueCreateInfoCount = 0;
         if (queueFamilyIndex_graphics != VK_QUEUE_FAMILY_IGNORED) {
@@ -593,8 +534,7 @@ class graphicsBase {
         }
         if (queueFamilyIndex_presentation != VK_QUEUE_FAMILY_IGNORED &&
             queueFamilyIndex_presentation != queueFamilyIndex_graphics) {
-            queueCreateInfos[queueCreateInfoCount++].queueFamilyIndex =
-                queueFamilyIndex_presentation;
+            queueCreateInfos[queueCreateInfoCount++].queueFamilyIndex = queueFamilyIndex_presentation;
         }
         if (queueFamilyIndex_compute != VK_QUEUE_FAMILY_IGNORED &&
             queueFamilyIndex_compute != queueFamilyIndex_graphics &&
@@ -645,19 +585,14 @@ class graphicsBase {
     }
 
     // 创建逻辑设备失败后，检查所需的扩展是否可用
-    result_t CheckDeviceExtensions(
-        std::span<const char*>& extensionsToCheck, const char* layerName = nullptr
-    ) const {}
+    result_t CheckDeviceExtensions(std::span<const char*>& extensionsToCheck, const char* layerName = nullptr) const {}
 
-    void DeviceExtensions(const std::vector<const char*>& extensionNames) {
-        deviceExtensions = extensionNames;
-    }
+    void DeviceExtensions(const std::vector<const char*>& extensionNames) { deviceExtensions = extensionNames; }
 
     result_t GetSurfaceFormats() {
         uint32_t surfaceFormatCount;
-        if (VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-                physicalDevice, surface, &surfaceFormatCount, nullptr
-            )) {
+        if (VkResult result =
+                vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, nullptr)) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get the count of surface formats!\nError code: "
                 "{}\n",
@@ -666,10 +601,7 @@ class graphicsBase {
             return result;
         }
         if (!surfaceFormatCount) {
-            outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to find any supported surface format!\n"
-            ),
-                abort();
+            outStream << std::format("[ graphicsBase ] ERROR\nFailed to find any supported surface format!\n"), abort();
         }
         availableSurfaceFormats.resize(surfaceFormatCount);
         VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -677,8 +609,7 @@ class graphicsBase {
         );
         if (result) {
             outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to get surface formats!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ graphicsBase ] ERROR\nFailed to get surface formats!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -716,9 +647,8 @@ class graphicsBase {
     // 创建交换链
     result_t CreateSwapchain(bool limitFrameRate = true, VkSwapchainCreateFlagsKHR flags = 0) {
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-                physicalDevice, surface, &surfaceCapabilities
-            )) {
+        if (VkResult result =
+                vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get physical device surface "
                 "capabilities!\nError code: {}\n",
@@ -728,8 +658,7 @@ class graphicsBase {
         }
         // 指定图像的数量
         swapchainCreateInfo.minImageCount =
-            surfaceCapabilities.minImageCount +
-            (surfaceCapabilities.maxImageCount > surfaceCapabilities.minImageCount);
+            surfaceCapabilities.minImageCount + (surfaceCapabilities.maxImageCount > surfaceCapabilities.minImageCount);
         // 指定图像的尺寸
         swapchainCreateInfo.imageExtent =
             surfaceCapabilities.currentExtent.width == -1
@@ -760,9 +689,7 @@ class graphicsBase {
         if (surfaceCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
             swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         } else {
-            outStream << std::format(
-                "[ graphicsBase ] WARNING\nVK_IMAGE_USAGE_TRANSFRE_DST_BIT isn't supported!\n"
-            );
+            outStream << std::format("[ graphicsBase ] WARNING\nVK_IMAGE_USAGE_TRANSFRE_DST_BIT isn't supported!\n");
         }
         // 指定图像格式
         if (availableSurfaceFormats.empty()) {
@@ -782,9 +709,8 @@ class graphicsBase {
 
         // 指定呈现模式
         uint32_t surfacePresentModeCount;
-        if (VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-                physicalDevice, surface, &surfacePresentModeCount, nullptr
-            )) {
+        if (VkResult result =
+                vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &surfacePresentModeCount, nullptr)) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get the count of surface present modes!\nError "
                 "code: {}\n",
@@ -793,10 +719,7 @@ class graphicsBase {
             return result;
         }
         if (!surfacePresentModeCount) {
-            outStream << std::format(
-                "[ graphicsBase ] ERROR\nFailed to find any surface present mode!\n"
-            ),
-                abort();
+            outStream << std::format("[ graphicsBase ] ERROR\nFailed to find any surface present mode!\n"), abort();
         }
         std::vector<VkPresentModeKHR> surfacePresentModes(surfacePresentModeCount);
         if (VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -832,9 +755,8 @@ class graphicsBase {
 
     result_t RecreateSwapchain() {
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-                physicalDevice, surface, &surfaceCapabilities
-            )) {
+        if (VkResult result =
+                vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities)) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to get physical device surface "
                 "capabilities!\nError code: {}\n",
@@ -842,8 +764,7 @@ class graphicsBase {
             );
             return result;
         }
-        if (surfaceCapabilities.currentExtent.width == 0 ||
-            surfaceCapabilities.currentExtent.height == 0) {
+        if (surfaceCapabilities.currentExtent.width == 0 || surfaceCapabilities.currentExtent.height == 0) {
             return VK_SUBOPTIMAL_KHR;
         }
         swapchainCreateInfo.imageExtent = surfaceCapabilities.currentExtent;
@@ -851,9 +772,7 @@ class graphicsBase {
 
         VkResult result = vkQueueWaitIdle(queue_graphics);
         // 仅在等待图形队列成功，且图形与呈现所用队列不同时等待呈现队列
-        if (!result && queue_graphics != queue_presentation) {
-            result = vkQueueWaitIdle(queue_presentation);
-        }
+        if (!result && queue_graphics != queue_presentation) { result = vkQueueWaitIdle(queue_presentation); }
         if (result) {
             outStream << std::format(
                 "[ graphicsBase ] ERROR\nFailed to wait for the queue to be idle!\nError code: "
@@ -882,8 +801,7 @@ class graphicsBase {
             swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
         }
         while (VkResult result = vkAcquireNextImageKHR(
-                   device, swapchain, UINT64_MAX, semaphore_imageIsAvailable, VK_NULL_HANDLE,
-                   &currentImageIndex
+                   device, swapchain, UINT64_MAX, semaphore_imageIsAvailable, VK_NULL_HANDLE, &currentImageIndex
                )) {
             switch (result) {
                 case VK_SUBOPTIMAL_KHR:
@@ -905,9 +823,7 @@ class graphicsBase {
     }
 
     // 提交命令缓冲区到图形队列，需要自定义同步
-    result_t SubmitCommandBuffer_Graphics(
-        VkSubmitInfo& submitInfo, VkFence fence = VK_NULL_HANDLE
-    ) const {
+    result_t SubmitCommandBuffer_Graphics(VkSubmitInfo& submitInfo, VkFence fence = VK_NULL_HANDLE) const {
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         VkResult result = vkQueueSubmit(queue_graphics, 1, &submitInfo, fence);
         if (result) {
@@ -923,8 +839,7 @@ class graphicsBase {
     result_t SubmitCommandBuffer_Graphics(
         VkCommandBuffer commandBuffer, VkSemaphore semaphore_imageIsAvailable = VK_NULL_HANDLE,
         VkSemaphore semaphore_renderingIsOver = VK_NULL_HANDLE, VkFence fence = VK_NULL_HANDLE,
-        VkPipelineStageFlags waitDstStage_imageIsAvailable =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        VkPipelineStageFlags waitDstStage_imageIsAvailable = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
     ) const {
         VkSubmitInfo submitInfo = {.commandBufferCount = 1, .pCommandBuffers = &commandBuffer};
         // 命令缓冲区需要等待semaphore_imageIsAvailable
@@ -943,17 +858,13 @@ class graphicsBase {
     }
 
     // 提交单个命令缓冲区到图形队列,只使用栅栏
-    result_t SubmitCommandBuffer_Graphics(
-        VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE
-    ) const {
+    result_t SubmitCommandBuffer_Graphics(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE) const {
         VkSubmitInfo submitInfo = {.commandBufferCount = 1, .pCommandBuffers = &commandBuffer};
         return SubmitCommandBuffer_Graphics(submitInfo, fence);
     }
 
     // 提交命令缓冲区到计算队列，需要自定义同步
-    result_t SubmitCommandBuffer_Compute(
-        VkSubmitInfo& submitInfo, VkFence fence = VK_NULL_HANDLE
-    ) const {
+    result_t SubmitCommandBuffer_Compute(VkSubmitInfo& submitInfo, VkFence fence = VK_NULL_HANDLE) const {
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         VkResult result = vkQueueSubmit(queue_compute, 1, &submitInfo, fence);
         if (result) {
@@ -966,9 +877,7 @@ class graphicsBase {
     }
 
     // 提交命令缓冲区到计算队列,只使用栅栏
-    result_t SubmitCommandBuffer_Compute(
-        VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE
-    ) const {
+    result_t SubmitCommandBuffer_Compute(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE) const {
         VkSubmitInfo submitInfo = {.commandBufferCount = 1, .pCommandBuffers = &commandBuffer};
         return SubmitCommandBuffer_Compute(submitInfo, fence);
     }
@@ -1023,12 +932,10 @@ class fence {
     // Const function
     // CPU通过调用Wait函数等待栅栏信号，GPU完成工作后会设置栅栏为有信号
     result_t Wait() const {
-        VkResult result =
-            vkWaitForFences(graphicsBase::Base().Device(), 1, &handle, false, UINT64_MAX);
+        VkResult result = vkWaitForFences(graphicsBase::Base().Device(), 1, &handle, false, UINT64_MAX);
         if (result) {
             outStream << std::format(
-                "[ fence ] ERROR\nFailed to wait for the fence!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ fence ] ERROR\nFailed to wait for the fence!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1038,8 +945,7 @@ class fence {
         VkResult result = vkResetFences(graphicsBase::Base().Device(), 1, &handle);
         if (result) {
             outStream << std::format(
-                "[ fence ] ERROR\nFailed to reset the fence!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ fence ] ERROR\nFailed to reset the fence!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1063,12 +969,10 @@ class fence {
     // Non-const function
     result_t Create(VkFenceCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        VkResult result =
-            vkCreateFence(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateFence(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ fence ] ERROR\nFailed to create a fence!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ fence ] ERROR\nFailed to create a fence!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1093,12 +997,10 @@ class semaphore {
     // Non-const function
     result_t Create(VkSemaphoreCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        VkResult result =
-            vkCreateSemaphore(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateSemaphore(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ semaphore ] ERROR\nFailed to create a semaphore!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ semaphore ] ERROR\nFailed to create a semaphore!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1121,9 +1023,7 @@ class commandBuffer {
     DefineHandleTypeOperator;
     DefineAddressFunction;
     // Const function
-    result_t Begin(
-        VkCommandBufferUsageFlags usageFlags, VkCommandBufferInheritanceInfo& inheritanceInfo
-    ) const {
+    result_t Begin(VkCommandBufferUsageFlags usageFlags, VkCommandBufferInheritanceInfo& inheritanceInfo) const {
         inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
         VkCommandBufferBeginInfo beginInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1171,9 +1071,7 @@ class commandPool {
   public:
     commandPool() = default;
     commandPool(VkCommandPoolCreateInfo& createInfo) { Create(createInfo); }
-    commandPool(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) {
-        Create(queueFamilyIndex, flags);
-    }
+    commandPool(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) { Create(queueFamilyIndex, flags); }
     commandPool(commandPool&& other) noexcept { MoveHandle; }
     ~commandPool() { DestroyHandleBy(vkDestroyCommandPool); }
     // Getter
@@ -1181,8 +1079,7 @@ class commandPool {
     DefineAddressFunction;
     // Const function
     result_t AllocateBuffers(
-        arrayRef<VkCommandBuffer> buffers,
-        VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
+        arrayRef<VkCommandBuffer> buffers, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
     ) const {
         VkCommandBufferAllocateInfo allocateInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -1190,9 +1087,7 @@ class commandPool {
             .level = level,
             .commandBufferCount = static_cast<uint32_t>(buffers.Count())
         };
-        VkResult result = vkAllocateCommandBuffers(
-            graphicsBase::Base().Device(), &allocateInfo, buffers.Pointer()
-        );
+        VkResult result = vkAllocateCommandBuffers(graphicsBase::Base().Device(), &allocateInfo, buffers.Pointer());
         if (result) {
             outStream << std::format(
                 "[ commandPool ] ERROR\nFailed to allocate command buffers!\nError code: {}\n",
@@ -1202,25 +1097,19 @@ class commandPool {
         return result;
     }
     result_t AllocateBuffers(
-        arrayRef<commandBuffer> buffers,
-        VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
+        arrayRef<commandBuffer> buffers, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
     ) const {
         return AllocateBuffers({&buffers[0].handle, buffers.Count()}, level);
     }
     void FreeBuffers(arrayRef<VkCommandBuffer> buffers) const {
-        vkFreeCommandBuffers(
-            graphicsBase::Base().Device(), handle, buffers.Count(), buffers.Pointer()
-        );
+        vkFreeCommandBuffers(graphicsBase::Base().Device(), handle, buffers.Count(), buffers.Pointer());
         memset(buffers.Pointer(), 0, buffers.Count() * sizeof(VkCommandBuffer));
     }
-    void FreeBuffers(arrayRef<commandBuffer> buffers) const {
-        FreeBuffers({&buffers[0].handle, buffers.Count()});
-    }
+    void FreeBuffers(arrayRef<commandBuffer> buffers) const { FreeBuffers({&buffers[0].handle, buffers.Count()}); }
     // Non-const function
     result_t Create(VkCommandPoolCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        VkResult result =
-            vkCreateCommandPool(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateCommandPool(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
                 "[ commandPool ] ERROR\nFailed to create a command pool!\nError code: {}\n",
@@ -1257,8 +1146,7 @@ class renderPass {
     }
     void CmdBegin(
         VkCommandBuffer commandBuffer, VkFramebuffer framebuffer, VkRect2D renderArea,
-        arrayRef<const VkClearValue> clearValues = {},
-        VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE
+        arrayRef<const VkClearValue> clearValues = {}, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE
     ) const {
         VkRenderPassBeginInfo beginInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -1270,22 +1158,17 @@ class renderPass {
         };
         vkCmdBeginRenderPass(commandBuffer, &beginInfo, subpassContents);
     }
-    void CmdNext(
-        VkCommandBuffer commandBuffer,
-        VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE
-    ) const {
+    void CmdNext(VkCommandBuffer commandBuffer, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) const {
         vkCmdNextSubpass(commandBuffer, subpassContents);
     }
     void CmdEnd(VkCommandBuffer commandBuffer) const { vkCmdEndRenderPass(commandBuffer); }
     // Non-const function
     result_t Create(VkRenderPassCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        VkResult result =
-            vkCreateRenderPass(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateRenderPass(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ renderPass ] ERROR\nFailed to create a render pass!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ renderPass ] ERROR\nFailed to create a render pass!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1306,12 +1189,10 @@ class framebuffer {
     // Non-const function
     result_t Create(VkFramebufferCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        VkResult result =
-            vkCreateFramebuffer(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateFramebuffer(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ framebuffer ] ERROR\nFailed to create a framebuffer!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ framebuffer ] ERROR\nFailed to create a framebuffer!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1334,9 +1215,7 @@ class shaderModule {
     DefineHandleTypeOperator;
     DefineAddressFunction;
     // const function
-    VkPipelineShaderStageCreateInfo StageCreateInfo(
-        VkShaderStageFlagBits stage, const char* entry = "main"
-    ) const {
+    VkPipelineShaderStageCreateInfo StageCreateInfo(VkShaderStageFlagBits stage, const char* entry = "main") const {
         return {
             VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,  // sType
             nullptr,                                              // pNext
@@ -1350,12 +1229,10 @@ class shaderModule {
     // Non-const function
     result_t Create(VkShaderModuleCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        VkResult result =
-            vkCreateShaderModule(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateShaderModule(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ shader ] ERROR\nFailed to create a shader module!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ shader ] ERROR\nFailed to create a shader module!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1396,8 +1273,7 @@ class pipelineLayout {
     // Non-const function
     result_t Create(VkPipelineLayoutCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        VkResult result =
-            vkCreatePipelineLayout(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreatePipelineLayout(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
                 "[ pipelineLayout ] ERROR\nFailed to create a pipeline layout!\nError code: {}\n",
@@ -1423,9 +1299,8 @@ class pipeline {
     // Non-const function
     result_t Create(VkGraphicsPipelineCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        VkResult result = vkCreateGraphicsPipelines(
-            graphicsBase::Base().Device(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle
-        );
+        VkResult result =
+            vkCreateGraphicsPipelines(graphicsBase::Base().Device(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
                 "[ pipeline ] ERROR\nFailed to create a graphics pipeline!\nError code: {}\n",
@@ -1436,9 +1311,8 @@ class pipeline {
     }
     result_t Create(VkComputePipelineCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        VkResult result = vkCreateComputePipelines(
-            graphicsBase::Base().Device(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle
-        );
+        VkResult result =
+            vkCreateComputePipelines(graphicsBase::Base().Device(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
                 "[ pipeline ] ERROR\nFailed to create a compute pipeline!\nError code: {}\n",
@@ -1521,26 +1395,20 @@ class deviceMemory {
         if (!(memoryProperties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             inverseDeltaOffset = AdjustNonCoherentMemoryRange(size, offset);
         }
-        if (VkResult result =
-                vkMapMemory(graphicsBase::Base().Device(), handle, offset, size, 0, &pData)) {
+        if (VkResult result = vkMapMemory(graphicsBase::Base().Device(), handle, offset, size, 0, &pData)) {
             outStream << std::format(
-                "[ deviceMemory ] ERROR\nFailed to map the memory!\nError code: {}\n",
-                int32_t(result)
+                "[ deviceMemory ] ERROR\nFailed to map the memory!\nError code: {}\n", int32_t(result)
             );
             return result;
         }
         if (!(memoryProperties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             pData = static_cast<uint8_t*>(pData) + inverseDeltaOffset;
             VkMappedMemoryRange mappedMemoryRange = {
-                .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                .memory = handle,
-                .offset = offset,
-                .size = size
+                .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .memory = handle, .offset = offset, .size = size
             };
             // 确保物理设备对该片内存的写入可以被CPU侧正确读取
-            if (VkResult result = vkInvalidateMappedMemoryRanges(
-                    graphicsBase::Base().Device(), 1, &mappedMemoryRange
-                )) {
+            if (VkResult result =
+                    vkInvalidateMappedMemoryRanges(graphicsBase::Base().Device(), 1, &mappedMemoryRange)) {
                 outStream << std::format(
                     "[ deviceMemory ] ERROR\nFailed to invalidate the mapped memory range!\nError "
                     "code: {}\n",
@@ -1557,14 +1425,9 @@ class deviceMemory {
         if (!(memoryProperties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             AdjustNonCoherentMemoryRange(size, offset);
             VkMappedMemoryRange mappedMemoryRange = {
-                .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                .memory = handle,
-                .offset = offset,
-                .size = size
+                .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .memory = handle, .offset = offset, .size = size
             };
-            if (VkResult result = vkFlushMappedMemoryRanges(
-                    graphicsBase::Base().Device(), 1, &mappedMemoryRange
-                )) {
+            if (VkResult result = vkFlushMappedMemoryRanges(graphicsBase::Base().Device(), 1, &mappedMemoryRange)) {
                 outStream << std::format(
                     "[ deviceMemory ] ERROR\nFailed to flush the memory!\nError code: {}\n",
                     static_cast<int32_t>(result)
@@ -1587,9 +1450,7 @@ class deviceMemory {
         memcpy(pData_dst, pData_src, static_cast<size_t>(size));
         return UnmapMemory(size, offset);
     }
-    result_t BufferData(const auto& data_src) const {
-        return BufferData(&data_src, sizeof data_src);
-    }
+    result_t BufferData(const auto& data_src) const { return BufferData(&data_src, sizeof data_src); }
 
     // RetrieveData(...)用于从设备内存区读取数据，适用于memcpy从内存区读取数据后立刻取消映射的情况
     result_t RetrieveData(void* pData_dst, VkDeviceSize size, VkDeviceSize offset = 0) const {
@@ -1601,14 +1462,12 @@ class deviceMemory {
 
     // Non-const function
     result_t Allocate(VkMemoryAllocateInfo& allocateInfo) {
-        if (allocateInfo.memoryTypeIndex >=
-            graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
+        if (allocateInfo.memoryTypeIndex >= graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
             outStream << std::format("[ deviceMemory ] ERROR\nInvalid memory type index!\n");
             return VK_RESULT_MAX_ENUM;
         }
         allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        if (VkResult result =
-                vkAllocateMemory(graphicsBase::Base().Device(), &allocateInfo, nullptr, &handle)) {
+        if (VkResult result = vkAllocateMemory(graphicsBase::Base().Device(), &allocateInfo, nullptr, &handle)) {
             outStream << std::format(
                 "[ deviceMemory ] ERROR\nFailed to allocate device memory!\nError code: {}\n",
                 static_cast<int32_t>(result)
@@ -1646,14 +1505,13 @@ class buffer {
         VkMemoryRequirements memoryRequirements;
         vkGetBufferMemoryRequirements(graphicsBase::Base().Device(), handle, &memoryRequirements);
         memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        auto& physicalDeviceMemoryProperties =
-            graphicsBase::Base().PhysicalDeviceMemoryProperties();
+        auto& physicalDeviceMemoryProperties = graphicsBase::Base().PhysicalDeviceMemoryProperties();
         for (size_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount; i++) {
             // 如果相应的设备内存类型支持该缓冲区，则继续执行后续判断，否则短路
             if (memoryRequirements.memoryTypeBits & 1 << i &&
                 // 如果相应的设备内存类型支持所需的内存属性，覆写memoryAllocateInfo.memoryTypeIndex
-                (physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags &
-                 desiredMemoryProperties) == desiredMemoryProperties) {
+                (physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & desiredMemoryProperties) ==
+                    desiredMemoryProperties) {
                 memoryAllocateInfo.memoryTypeIndex = i;
                 break;
             }
@@ -1662,12 +1520,10 @@ class buffer {
         return memoryAllocateInfo;
     }
     result_t BindMemory(VkDeviceMemory deviceMemory, VkDeviceSize memoryOffset = 0) const {
-        VkResult result =
-            vkBindBufferMemory(graphicsBase::Base().Device(), handle, deviceMemory, memoryOffset);
+        VkResult result = vkBindBufferMemory(graphicsBase::Base().Device(), handle, deviceMemory, memoryOffset);
         if (result) {
             outStream << std::format(
-                "[ buffer ] ERROR\nFailed to attach the memory!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ buffer ] ERROR\nFailed to attach the memory!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1675,12 +1531,10 @@ class buffer {
     // Non-const function
     result_t Create(VkBufferCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        VkResult result =
-            vkCreateBuffer(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateBuffer(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ buffer ] ERROR\nFailed to create a buffer!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ buffer ] ERROR\nFailed to create a buffer!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1694,8 +1548,7 @@ class bufferMemory : buffer, deviceMemory {
     bufferMemory(VkBufferCreateInfo& createInfo, VkMemoryPropertyFlags desiredMemoryProperties) {
         Create(createInfo, desiredMemoryProperties);
     }
-    bufferMemory(bufferMemory&& other) noexcept
-        : buffer(std::move(other)), deviceMemory(std::move(other)) {
+    bufferMemory(bufferMemory&& other) noexcept : buffer(std::move(other)), deviceMemory(std::move(other)) {
         areBound = other.areBound;
         other.areBound = false;
     }
@@ -1720,8 +1573,7 @@ class bufferMemory : buffer, deviceMemory {
 
     result_t AllocateMemory(VkMemoryPropertyFlags desiredMemoryProperties) {
         VkMemoryAllocateInfo allocateInfo = MemoryAllocateInfo(desiredMemoryProperties);
-        if (allocateInfo.memoryTypeIndex >=
-            graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
+        if (allocateInfo.memoryTypeIndex >= graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
             return VK_RESULT_MAX_ENUM;
         }
         return Allocate(allocateInfo);
@@ -1736,8 +1588,8 @@ class bufferMemory : buffer, deviceMemory {
     // 分配设备内存、创建缓冲区并绑定内存
     result_t Create(VkBufferCreateInfo& createInfo, VkMemoryPropertyFlags desiredMemoryProperties) {
         VkResult result;
-        false || (result = CreateBuffer(createInfo)) ||
-            (result = AllocateMemory(desiredMemoryProperties)) || (result = BindMemory());
+        false || (result = CreateBuffer(createInfo)) || (result = AllocateMemory(desiredMemoryProperties)) ||
+            (result = BindMemory());
         return result;
     }
 };
@@ -1759,20 +1611,16 @@ class bufferView {
     // Non-const function
     result_t Create(VkBufferViewCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-        VkResult result =
-            vkCreateBufferView(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateBufferView(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ bufferView ] ERROR\nFailed to create a buffer view!\nError code: {}\n",
-                int32_t(result)
+                "[ bufferView ] ERROR\nFailed to create a buffer view!\nError code: {}\n", int32_t(result)
             );
         }
         return result;
     }
 
-    result_t Create(
-        VkBuffer buffer, VkFormat format, VkDeviceSize offset = 0, VkDeviceSize range = 0
-    ) {
+    result_t Create(VkBuffer buffer, VkFormat format, VkDeviceSize offset = 0, VkDeviceSize range = 0) {
         VkBufferViewCreateInfo createInfo = {
             .buffer = buffer,
             .format = format,
@@ -1800,14 +1648,11 @@ class image {
         VkMemoryRequirements memoryRequirements;
         vkGetImageMemoryRequirements(graphicsBase::Base().Device(), handle, &memoryRequirements);
         memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        auto GetMemoryTypeIndex = [](uint32_t memoryTypeBits,
-                                     VkMemoryPropertyFlags desiredMemoryProperties) {
-            auto& physicalDeviceMemoryProperties =
-                graphicsBase::Base().PhysicalDeviceMemoryProperties();
+        auto GetMemoryTypeIndex = [](uint32_t memoryTypeBits, VkMemoryPropertyFlags desiredMemoryProperties) {
+            auto& physicalDeviceMemoryProperties = graphicsBase::Base().PhysicalDeviceMemoryProperties();
             for (size_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount; i++) {
-                if (memoryTypeBits & 1 << i &&
-                    (physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags &
-                     desiredMemoryProperties) == desiredMemoryProperties) {
+                if (memoryTypeBits & 1 << i && (physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags &
+                                                desiredMemoryProperties) == desiredMemoryProperties) {
                     return static_cast<uint32_t>(i);
                 }
             }
@@ -1818,20 +1663,17 @@ class image {
         if (memoryAllocateInfo.memoryTypeIndex == UINT32_MAX &&
             desiredMemoryProperties & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
             memoryAllocateInfo.memoryTypeIndex = GetMemoryTypeIndex(
-                memoryRequirements.memoryTypeBits,
-                desiredMemoryProperties & ~VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
+                memoryRequirements.memoryTypeBits, desiredMemoryProperties & ~VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
             );
         }
         return memoryAllocateInfo;
     }
 
     result_t BindMemory(VkDeviceMemory deviceMemory, VkDeviceSize memoryOffset = 0) const {
-        VkResult result =
-            vkBindImageMemory(graphicsBase::Base().Device(), handle, deviceMemory, memoryOffset);
+        VkResult result = vkBindImageMemory(graphicsBase::Base().Device(), handle, deviceMemory, memoryOffset);
         if (result) {
             outStream << std::format(
-                "[ image ] ERROR\nFailed to attach the memory!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ image ] ERROR\nFailed to attach the memory!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1839,12 +1681,10 @@ class image {
 
     result_t Create(VkImageCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        VkResult result =
-            vkCreateImage(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateImage(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ image ] ERROR\nFailed to create an image!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ image ] ERROR\nFailed to create an image!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
@@ -1855,8 +1695,7 @@ class imageMemory : image, deviceMemory {
   public:
     imageMemory() = default;
     imageMemory(VkImageCreateInfo& createInfo, VkMemoryPropertyFlags desiredMemoryProperties) {}
-    imageMemory(imageMemory&& other) noexcept
-        : image(std::move(other)), deviceMemory(std::move(other)) {
+    imageMemory(imageMemory&& other) noexcept : image(std::move(other)), deviceMemory(std::move(other)) {
         areBound = other.areBound;
         other.areBound = false;
     }
@@ -1874,8 +1713,7 @@ class imageMemory : image, deviceMemory {
 
     result_t AllocateMemory(VkMemoryPropertyFlags desiredMemoryProperties) {
         VkMemoryAllocateInfo allocateInfo = MemoryAllocateInfo(desiredMemoryProperties);
-        if (allocateInfo.memoryTypeIndex >=
-            graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
+        if (allocateInfo.memoryTypeIndex >= graphicsBase::Base().PhysicalDeviceMemoryProperties().memoryTypeCount) {
             return VK_RESULT_MAX_ENUM;
         }
         return Allocate(allocateInfo);
@@ -1889,8 +1727,8 @@ class imageMemory : image, deviceMemory {
 
     result_t Create(VkImageCreateInfo& createInfo, VkMemoryPropertyFlags desiredMemoryProperties) {
         VkResult result;
-        false || (result = CreateImage(createInfo)) ||
-            (result = AllocateMemory(desiredMemoryProperties)) || (result = BindMemory());
+        false || (result = CreateImage(createInfo)) || (result = AllocateMemory(desiredMemoryProperties)) ||
+            (result = BindMemory());
         return result;
     }
 };
@@ -1902,8 +1740,8 @@ class imageView {
     imageView() = default;
     imageView(VkImageViewCreateInfo& createInfo) { Create(createInfo); }
     imageView(
-        VkImage image, VkImageViewType viewType, VkFormat format,
-        const VkImageSubresourceRange& subresourceRange, VkImageViewCreateFlags flags = 0
+        VkImage image, VkImageViewType viewType, VkFormat format, const VkImageSubresourceRange& subresourceRange,
+        VkImageViewCreateFlags flags = 0
     ) {
         Create(image, viewType, format, subresourceRange, flags);
     }
@@ -1915,19 +1753,17 @@ class imageView {
     // Non-const function
     result_t Create(VkImageViewCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        VkResult result =
-            vkCreateImageView(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        VkResult result = vkCreateImageView(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
         if (result) {
             outStream << std::format(
-                "[ imageView ] ERROR\nFailed to create an image view!\nError code: {}\n",
-                static_cast<int32_t>(result)
+                "[ imageView ] ERROR\nFailed to create an image view!\nError code: {}\n", static_cast<int32_t>(result)
             );
         }
         return result;
     }
     result_t Create(
-        VkImage image, VkImageViewType viewType, VkFormat format,
-        const VkImageSubresourceRange& subresourceRange, VkImageViewCreateFlags flags = 0
+        VkImage image, VkImageViewType viewType, VkFormat format, const VkImageSubresourceRange& subresourceRange,
+        VkImageViewCreateFlags flags = 0
     ) {
         VkImageViewCreateInfo createInfo = {
             .flags = flags,

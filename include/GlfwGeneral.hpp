@@ -28,9 +28,8 @@ inline bool InitializeWindow(
     // 当前显示器的指针
     pMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
-    pWindow = fullScreen
-                  ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr)
-                  : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
+    pWindow = fullScreen ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr)
+                         : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
 
     if (!pWindow) {
         std::cout << std::format("[ InitializeWindow ]\nFailed to create a glfw window!\n");
@@ -46,9 +45,7 @@ inline bool InitializeWindow(
     uint32_t extensionCount = 0;
     const char** extensionNames;
     extensionNames = glfwGetRequiredInstanceExtensions(&extensionCount);
-    for (size_t i = 0; i < extensionCount; i++) {
-        graphicsBase::Base().AddInstanceExtension(extensionNames[i]);
-    }
+    for (size_t i = 0; i < extensionCount; i++) { graphicsBase::Base().AddInstanceExtension(extensionNames[i]); }
 #endif
     // 添加所需的设备扩展
     graphicsBase::Base().AddDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -57,11 +54,9 @@ inline bool InitializeWindow(
 
     // 创建Window Surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    if (result_t result =
-            glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
+    if (result_t result = glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
         std::cout << std::format(
-            "[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n",
-            int32_t(result)
+            "[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result)
         );
 
         glfwTerminate();
@@ -70,8 +65,7 @@ inline bool InitializeWindow(
     graphicsBase::Base().Surface(surface);
 
     // 创建逻辑设备
-    if (graphicsBase::Base().GetPhysicalDevices() ||
-        graphicsBase::Base().DeterminePhysicalDevice(0, true, false) ||
+    if (graphicsBase::Base().GetPhysicalDevices() || graphicsBase::Base().DeterminePhysicalDevice(0, true, false) ||
         graphicsBase::Base().CreateDevice()) {
         return false;
     }

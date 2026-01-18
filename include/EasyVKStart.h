@@ -57,8 +57,7 @@ class arrayRef {
     // 从指针和计数构造
     arrayRef(T* pData, size_t elementCount) : pArray(pData), count(elementCount) {}
     // 若T带const修饰，兼容从对应的无const修饰版本的arrayRef构造
-    arrayRef(const arrayRef<std::remove_const_t<T>>& other)
-        : pArray(other.Ponter()), count(other.Count()) {}
+    arrayRef(const arrayRef<std::remove_const_t<T>>& other) : pArray(other.Ponter()), count(other.Count()) {}
 
     // Gettter
     T* Pointer() const { return pArray; }
