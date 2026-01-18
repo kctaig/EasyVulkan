@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <concepts>
 #include <format>
@@ -15,7 +16,6 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 // GLM
 #define GLM_FORCE_DEPTH_ZEWRO_TO_ONE
@@ -40,7 +40,7 @@ class arrayRef {
     T* const pArray = nullptr;
     size_t count = 0;
 
-   public:
+  public:
     // 从空参数构造，count为0
     arrayRef() = default;
     // 从单个对象构造，count为1
@@ -50,13 +50,15 @@ class arrayRef {
         requires std::ranges::contiguous_range<R> &&    // 连续内存范围
                      std::ranges::sized_range<R> &&     // 知道大小
                      std::ranges::borrowed_range<R> &&  // 可借用（不拥有数据）
-                     std::convertible_to<std::ranges::range_reference_t<R>,
-                                         T>  // 元素类型可转换为T
+                     std::convertible_to<
+                         std::ranges::range_reference_t<R>,
+                         T>  // 元素类型可转换为T
     arrayRef(R&& range) : pArray(std::ranges::data(range)), count(std::ranges::size(range)) {}
     // 从指针和计数构造
     arrayRef(T* pData, size_t elementCount) : pArray(pData), count(elementCount) {}
     // 若T带const修饰，兼容从对应的无const修饰版本的arrayRef构造
-    arrayRef(const arrayRef<std::remove_const_t<T>>& other) : pArray(other.Ponter()), count(other.Count()) {}
+    arrayRef(const arrayRef<std::remove_const_t<T>>& other)
+        : pArray(other.Ponter()), count(other.Count()) {}
 
     // Gettter
     T* Pointer() const { return pArray; }

@@ -12,7 +12,9 @@ inline GLFWmonitor* pMonitor;
 // 窗口标题
 inline auto windowTitle = "EasyVK";
 
-inline bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = true) {
+inline bool InitializeWindow(
+    VkExtent2D size, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = true
+) {
     using namespace vulkan;
     if (!glfwInit()) {
         std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize GLFW!\n");
@@ -26,8 +28,9 @@ inline bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isRe
     // 当前显示器的指针
     pMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
-    pWindow = fullScreen ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr)
-                         : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
+    pWindow = fullScreen
+                  ? glfwCreateWindow(pMode->width, pMode->height, windowTitle, pMonitor, nullptr)
+                  : glfwCreateWindow(size.width, size.height, windowTitle, nullptr, nullptr);
 
     if (!pWindow) {
         std::cout << std::format("[ InitializeWindow ]\nFailed to create a glfw window!\n");
@@ -54,8 +57,12 @@ inline bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isRe
 
     // 创建Window Surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    if (result_t result = glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
-        std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result));
+    if (result_t result =
+            glfwCreateWindowSurface(graphicsBase::Base().Instance(), pWindow, nullptr, &surface)) {
+        std::cout << std::format(
+            "[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n",
+            int32_t(result)
+        );
 
         glfwTerminate();
         return false;
@@ -63,14 +70,13 @@ inline bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isRe
     graphicsBase::Base().Surface(surface);
 
     // 创建逻辑设备
-    if (graphicsBase::Base().GetPhysicalDevices() || graphicsBase::Base().DeterminePhysicalDevice(0, true, false) ||
+    if (graphicsBase::Base().GetPhysicalDevices() ||
+        graphicsBase::Base().DeterminePhysicalDevice(0, true, false) ||
         graphicsBase::Base().CreateDevice()) {
         return false;
     }
     // 创建交换链
-    if (graphicsBase::Base().CreateSwapchain(limitFrameRate)) {
-        return false;
-    }
+    if (graphicsBase::Base().CreateSwapchain(limitFrameRate)) { return false; }
 
     return true;
 }

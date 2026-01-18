@@ -28,23 +28,33 @@ void CreateLayout() {
 void CreatePipeline() {
     static shaderModule vert("../shader/VertexBuffer.vert.spv");
     static shaderModule frag("../shader/VertexBuffer.frag.spv");
-    static VkPipelineShaderStageCreateInfo shaderStageCreateInfos_triangles[2] = {vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT),
-                                                                                  frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT)};
+    static VkPipelineShaderStageCreateInfo shaderStageCreateInfos_triangles[2] = {
+        vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT),
+        frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT)
+    };
     auto Create = [] {
         graphicsPipelineCreateInfoPack pipelineCiPack;
         pipelineCiPack.createInfo.layout = pipelineLayout_triangle;
         pipelineCiPack.createInfo.renderPass = RenderPassAndFramebuffers().renderPass;
         pipelineCiPack.inputAssemblyStateCi.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         // 数据来自0号顶点缓冲区，逐顶点输入
-        pipelineCiPack.vertexInputBindings.emplace_back(0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX);
+        pipelineCiPack.vertexInputBindings.emplace_back(
+            0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX
+        );
         /*
-         * location=0,对应 layout(location = 0) in
-         * bingding=0,表还数据来自0号顶点缓冲区，
+         * location=0,对应 “layout(location = 0) in”
+         * binding=0,表还数据来自0号顶点缓冲区
          * vec3对应VK_FORMAT_R32G32B32A32_SFLOAT，用offsetof计算color在vertex中的起始位置
          */
-        pipelineCiPack.vertexInputAttributes.emplace_back(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position));
-        pipelineCiPack.vertexInputAttributes.emplace_back(1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex, color));
-        pipelineCiPack.viewports.emplace_back(0.f, 0.f, float(windowSize.width), float(windowSize.height), 0.f, 1.f);
+        pipelineCiPack.vertexInputAttributes.emplace_back(
+            0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position)
+        );
+        pipelineCiPack.vertexInputAttributes.emplace_back(
+            1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex, color)
+        );
+        pipelineCiPack.viewports.emplace_back(
+            0.f, 0.f, float(windowSize.width), float(windowSize.height), 0.f, 1.f
+        );
         pipelineCiPack.scissors.emplace_back(VkOffset2D{}, windowSize);
         pipelineCiPack.multisampleStateCi.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         pipelineCiPack.colorBlendAttachmentStates.push_back({.colorWriteMask = 0b1111});
@@ -82,10 +92,11 @@ int main() {
     std::array<PerFrame, MAX_FRAMES_IN_FLIGHT> perFrame;
     std::vector<semaphore> semaphore_renderingIsOvers(graphicsBase::Base().SwapchainImageCount());
 
-    commandPool commandPool(graphicsBase::Base().QueueFamilyIndex_Graphics(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    for (auto& frame : perFrame) {
-        commandPool.AllocateBuffers(frame.commandBuffer);
-    }
+    commandPool commandPool(
+        graphicsBase::Base().QueueFamilyIndex_Graphics(),
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+    );
+    for (auto& frame : perFrame) { commandPool.AllocateBuffers(frame.commandBuffer); }
     uint32_t currentFrame = 0;
 
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
@@ -104,7 +115,8 @@ int main() {
     while (!glfwWindowShouldClose(pWindow)) {
         while (glfwGetWindowAttrib(pWindow, GLFW_ICONIFIED)) glfwWaitEvents();
 
-        const auto& [frameFence, semaphore_imageIsAvailable, commandBuffer] = perFrame[currentFrame];
+        const auto& [frameFence, semaphore_imageIsAvailable, commandBuffer] =
+            perFrame[currentFrame];
 
         // 当前帧的渲染命令不会在前一帧执行完之前开始，因此等待栅栏
         frameFence.WaitAndReset();
@@ -133,7 +145,9 @@ int main() {
         commandBuffer.End();
 
         // 提交命令缓冲区到队列，GPU开始执行渲染命令
-        graphicsBase::Base().SubmitCommandBuffer_Graphics(commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, frameFence);
+        graphicsBase::Base().SubmitCommandBuffer_Graphics(
+            commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, frameFence
+        );
         // GPU等待渲染完成信号量，然后展示图像
         graphicsBase::Base().PresentImage(semaphore_renderingIsOver);
 

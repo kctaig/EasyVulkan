@@ -20,23 +20,36 @@ class graphicsBasePlus {
     graphicsBasePlus() {
         auto Initialize = [] {
             if (graphicsBase::Base().QueueFamilyIndex_Graphics() != VK_QUEUE_FAMILY_IGNORED) {
-                singleton.commandPool_graphics.Create(graphicsBase::Base().QueueFamilyIndex_Graphics(),
-                                                      VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+                singleton.commandPool_graphics.Create(
+                    graphicsBase::Base().QueueFamilyIndex_Graphics(),
+                    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                );
                 singleton.commandPool_graphics.AllocateBuffers(singleton.commandBuffer_transfer);
             }
             if (graphicsBase::Base().QueueFamilyIndex_Compute() != VK_QUEUE_FAMILY_IGNORED) {
-                singleton.commandPool_compute.Create(graphicsBase::Base().QueueFamilyIndex_Compute(),
-                                                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+                singleton.commandPool_compute.Create(
+                    graphicsBase::Base().QueueFamilyIndex_Compute(),
+                    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                );
             }
             if (graphicsBase::Base().QueueFamilyIndex_Presentation() != VK_QUEUE_FAMILY_IGNORED &&
-                graphicsBase::Base().QueueFamilyIndex_Presentation() != graphicsBase::Base().QueueFamilyIndex_Graphics() &&
-                graphicsBase::Base().SwapchainCreateInfo().imageSharingMode == VK_SHARING_MODE_EXCLUSIVE) {
-                singleton.commandPool_presentation.Create(graphicsBase::Base().QueueFamilyIndex_Presentation(),
-                                                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-                singleton.commandPool_presentation.AllocateBuffers(singleton.commandBuffer_presentation);
+                graphicsBase::Base().QueueFamilyIndex_Presentation() !=
+                    graphicsBase::Base().QueueFamilyIndex_Graphics() &&
+                graphicsBase::Base().SwapchainCreateInfo().imageSharingMode ==
+                    VK_SHARING_MODE_EXCLUSIVE) {
+                singleton.commandPool_presentation.Create(
+                    graphicsBase::Base().QueueFamilyIndex_Presentation(),
+                    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                );
+                singleton.commandPool_presentation.AllocateBuffers(
+                    singleton.commandBuffer_presentation
+                );
             }
             for (size_t i = 0; i < std::size(singleton.formatProperties); i++) {
-                vkGetPhysicalDeviceFormatProperties(graphicsBase::Base().PhysicalDevice(), VkFormat(i), &singleton.formatProperties[i]);
+                vkGetPhysicalDeviceFormatProperties(
+                    graphicsBase::Base().PhysicalDevice(), VkFormat(i),
+                    &singleton.formatProperties[i]
+                );
             }
         };
 
@@ -53,7 +66,7 @@ class graphicsBasePlus {
     graphicsBasePlus(graphicsBasePlus&&) = delete;
     ~graphicsBasePlus() = default;
 
-   public:
+  public:
     // Getter
     const commandPool& CommandPool_Graphics() const { return commandPool_graphics; }
     const commandPool& CommandPool_Compute() const { return commandPool_compute; }
@@ -62,7 +75,10 @@ class graphicsBasePlus {
     const VkFormatProperties& FormatProperties(VkFormat format) const {
 #ifndef NDEBUG
         if (static_cast<uint32_t>(format) >= std::size(formatInfos_v1_0)) {
-            outStream << std::format("[ FormatProperties ] ERROR\nThis function only supports definite formats provided by VK_VERSION_1_0.\n");
+            outStream << std::format(
+                "[ FormatProperties ] ERROR\nThis function only supports definite formats provided "
+                "by VK_VERSION_1_0.\n"
+            );
             abort();
         }
 #endif
@@ -74,24 +90,26 @@ class graphicsBasePlus {
         fence fence;
         VkSubmitInfo submitInfo = {.commandBufferCount = 1, .pCommandBuffers = &commandBuffer};
         VkResult result = graphicsBase::Base().SubmitCommandBuffer_Graphics(submitInfo, fence);
-        if (!result) {
-            fence.Wait();
-        }
+        if (!result) { fence.Wait(); }
         return result;
     }
 
     // 提交命令缓冲区到呈现队列，进行图像所有权转移
-    // result_t AcquireImageOwnership_Presentation(VkSemaphore semaphore_renderingIsOver, VkSemaphore semaphore_ownershipIsTransfered,
+    // result_t AcquireImageOwnership_Presentation(VkSemaphore semaphore_renderingIsOver,
+    // VkSemaphore semaphore_ownershipIsTransfered,
     //                                             VkFence fence = VK_NULL_HANDLE) {
-    //     if (VkResult result = commandBuffer_presentation.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)) {
+    //     if (VkResult result =
+    //     commandBuffer_presentation.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)) {
     //         return result;
     //     }
     //     graphicsBase::Base().CmdTransferImageOwnership(commandBuffer_presentation);
     //     if (VkResult result = commandBuffer_presentation.End()) {
     //         return result;
     //     }
-    //     return graphicsBase::Base().SubmitCommandBuffer_Presentation(commandBuffer_presentation, semaphore_renderingIsOver,
-    //                                                                  semaphore_ownershipIsTransfered, fence);
+    //     return graphicsBase::Base().SubmitCommandBuffer_Presentation(commandBuffer_presentation,
+    //     semaphore_renderingIsOver,
+    //                                                                  semaphore_ownershipIsTransfered,
+    //                                                                  fence);
     // }
 };
 inline graphicsBasePlus graphicsBasePlus::singleton;
@@ -99,7 +117,10 @@ inline graphicsBasePlus graphicsBasePlus::singleton;
 constexpr formatInfo FormatInfo(VkFormat format) {
 #ifndef NDEBUG
     if (static_cast<uint32_t>(format) >= std::size(formatInfos_v1_0)) {
-        outStream << std::format("[ FormatInfo ] ERROR\nThis function only supports definite formats provided by VK_VERSION_1_0.\n");
+        outStream << std::format(
+            "[ FormatInfo ] ERROR\nThis function only supports definite formats provided by "
+            "VK_VERSION_1_0.\n"
+        );
         abort();
     }
 #endif
@@ -120,7 +141,9 @@ constexpr VkFormat Corresponding16BitFloatFormat(VkFormat format_32BitFloat) {
     return format_32BitFloat;
 }
 
-inline const VkFormatProperties& FormatProperties(VkFormat format) { return graphicsBase::Plus().FormatProperties(format); }
+inline const VkFormatProperties& FormatProperties(VkFormat format) {
+    return graphicsBase::Plus().FormatProperties(format);
+}
 
 class stagingBuffer {
     static inline class {
@@ -132,16 +155,16 @@ class stagingBuffer {
             return &stagingBuffer;
         }
 
-       public:
+      public:
         stagingBuffer& Get() const { return *pointer; }
     } stagingBuffer_mainThread;
 
-   protected:
+  protected:
     bufferMemory bufferMemory;
     VkDeviceSize memoryUsage = 0;  // 每次映射的内存大小
     image aliasedImage;
 
-   public:
+  public:
     stagingBuffer() = default;
     stagingBuffer(VkDeviceSize size) { Expand(size); }
     // Getter
@@ -151,15 +174,18 @@ class stagingBuffer {
     VkImage AliasedImage() const { return aliasedImage; }
     // Const function
     // 从缓冲区中取回数据
-    void RetrieveData(void* pData_src, VkDeviceSize size) const { bufferMemory.RetrieveData(pData_src, size); }
+    void RetrieveData(void* pData_src, VkDeviceSize size) const {
+        bufferMemory.RetrieveData(pData_src, size);
+    }
     // Non-const function
     // 所分配设备内存大小不够时重新分配
     void Expand(VkDeviceSize size) {
-        if (size <= bufferMemory.AllocationSize()) {
-            return;
-        }
+        if (size <= bufferMemory.AllocationSize()) { return; }
         Release();
-        VkBufferCreateInfo bufferCreateInfo = {.size = size, .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
+        VkBufferCreateInfo bufferCreateInfo = {
+            .size = size,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+        };
         bufferMemory.Create(bufferCreateInfo, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
     // 手动释放所有内存并销毁设备内存和缓冲区的handle
@@ -185,14 +211,16 @@ class stagingBuffer {
         if (!(FormatProperties(format).linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
             return VK_NULL_HANDLE;
         }
-        VkDeviceSize imageDataSize = static_cast<VkDeviceSize>(FormatInfo(format).sizePerPixel) * extent.width * extent.height;
-        if (imageDataSize > bufferMemory.AllocationSize()) {
-            return VK_NULL_HANDLE;
-        }
+        VkDeviceSize imageDataSize = static_cast<VkDeviceSize>(FormatInfo(format).sizePerPixel) *
+                                     extent.width * extent.height;
+        if (imageDataSize > bufferMemory.AllocationSize()) { return VK_NULL_HANDLE; }
         VkImageFormatProperties imageFormatProperties = {};
-        vkGetPhysicalDeviceImageFormatProperties(graphicsBase::Base().PhysicalDevice(), format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_LINEAR,
-                                                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, &imageFormatProperties);
-        if (extent.width > imageFormatProperties.maxExtent.width || extent.height > imageFormatProperties.maxExtent.height ||
+        vkGetPhysicalDeviceImageFormatProperties(
+            graphicsBase::Base().PhysicalDevice(), format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_LINEAR,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, &imageFormatProperties
+        );
+        if (extent.width > imageFormatProperties.maxExtent.width ||
+            extent.height > imageFormatProperties.maxExtent.height ||
             imageDataSize > imageFormatProperties.maxResourceSize) {
             return VK_NULL_HANDLE;
         }
@@ -211,21 +239,29 @@ class stagingBuffer {
         aliasedImage.Create(imageCreateInfo);
         VkImageSubresource subResource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
         VkSubresourceLayout subresourceLayout = {};
-        vkGetImageSubresourceLayout(graphicsBase::Base().Device(), aliasedImage, &subResource, &subresourceLayout);
-        if (subresourceLayout.size != imageDataSize) {
-            return VK_NULL_HANDLE;
-        }
+        vkGetImageSubresourceLayout(
+            graphicsBase::Base().Device(), aliasedImage, &subResource, &subresourceLayout
+        );
+        if (subresourceLayout.size != imageDataSize) { return VK_NULL_HANDLE; }
         aliasedImage.BindMemory(bufferMemory.Memory());
         return aliasedImage;
     }
     // Static function
     static VkBuffer Buffer_MianThread() { return stagingBuffer_mainThread.Get(); }
-    static void Expand_MainThread(VkDeviceSize size) { stagingBuffer_mainThread.Get().Expand(size); }
+    static void Expand_MainThread(VkDeviceSize size) {
+        stagingBuffer_mainThread.Get().Expand(size);
+    }
     static void Release_MainThread() { stagingBuffer_mainThread.Get().Release(); }
-    static void* MapMemory_MainThread(VkDeviceSize size) { return stagingBuffer_mainThread.Get().MapMemory(size); }
+    static void* MapMemory_MainThread(VkDeviceSize size) {
+        return stagingBuffer_mainThread.Get().MapMemory(size);
+    }
     static void UnmapMemory_MainThread() { stagingBuffer_mainThread.Get().UnmapMemory(); }
-    static void BufferData_MainThread(const void* pData_src, VkDeviceSize size) { stagingBuffer_mainThread.Get().BufferData(pData_src, size); }
-    static void RetrieveData_MainThread(void* pData_src, VkDeviceSize size) { stagingBuffer_mainThread.Get().RetrieveData(pData_src, size); }
+    static void BufferData_MainThread(const void* pData_src, VkDeviceSize size) {
+        stagingBuffer_mainThread.Get().BufferData(pData_src, size);
+    }
+    static void RetrieveData_MainThread(void* pData_src, VkDeviceSize size) {
+        stagingBuffer_mainThread.Get().RetrieveData(pData_src, size);
+    }
     [[nodiscard]] static VkImage AliasedImage2D_MainThread(VkFormat format, VkExtent2D extent) {
         return stagingBuffer_mainThread.Get().AliasedImage2D(format, extent);
     }
@@ -233,12 +269,14 @@ class stagingBuffer {
 
 // 将具有VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT属性的缓冲区进行封装的类
 class deviceLocalBuffer {
-   protected:
+  protected:
     bufferMemory bufferMemory;
 
-   public:
+  public:
     deviceLocalBuffer() = default;
-    deviceLocalBuffer(VkDeviceSize size, VkBufferUsageFlags desiredUsages_Without_transfer_dst) { Create(size, desiredUsages_Without_transfer_dst); }
+    deviceLocalBuffer(VkDeviceSize size, VkBufferUsageFlags desiredUsages_Without_transfer_dst) {
+        Create(size, desiredUsages_Without_transfer_dst);
+    }
     // Getter
     explicit operator VkBuffer() const { return bufferMemory.Buffer(); }
     const VkBuffer* Address() const { return bufferMemory.AddressOfBuffer(); }
@@ -262,20 +300,27 @@ class deviceLocalBuffer {
         auto& commandBuffer = graphicsBase::Plus().CommandBuffer_Transfer();
         commandBuffer.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         VkBufferCopy region = {0, offset, size};
-        vkCmdCopyBuffer(commandBuffer, stagingBuffer::Buffer_MianThread(), bufferMemory.Buffer(), 1, &region);
+        vkCmdCopyBuffer(
+            commandBuffer, stagingBuffer::Buffer_MianThread(), bufferMemory.Buffer(), 1, &region
+        );
         commandBuffer.End();
         graphicsBase::Plus().ExecuteCommandBuffer_Graphics(commandBuffer);
     }
 
     // 适用于更新不连续的多块数据，stride是每组数据间的步长
-    void TransferData(const void* pData_src, uint32_t elementCount, VkDeviceSize elementsSize, VkDeviceSize stride_src, VkDeviceSize stride_dst,
-                      VkDeviceSize offset = 0) const {
+    void TransferData(
+        const void* pData_src, uint32_t elementCount, VkDeviceSize elementsSize,
+        VkDeviceSize stride_src, VkDeviceSize stride_dst, VkDeviceSize offset = 0
+    ) const {
         if (bufferMemory.MemoryProperties() & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
             void* pData_dst = nullptr;
             bufferMemory.MapMemory(pData_dst, elementCount * stride_dst, offset);
             for (size_t i = 0; i < elementCount; i++) {
-                memcpy(stride_dst * i + static_cast<uint8_t*>(pData_dst), stride_src * i + static_cast<const uint8_t*>(pData_src),
-                       static_cast<size_t>(elementCount));
+                memcpy(
+                    stride_dst * i + static_cast<uint8_t*>(pData_dst),
+                    stride_src * i + static_cast<const uint8_t*>(pData_src),
+                    static_cast<size_t>(elementCount)
+                );
             }
             bufferMemory.UnmapMemory(elementCount * stride_dst, offset);
             return;
@@ -287,7 +332,10 @@ class deviceLocalBuffer {
         for (size_t i = 0; i < elementCount; i++) {
             regions[i] = {stride_src * i, stride_dst * i + offset, elementsSize};
         }
-        vkCmdCopyBuffer(commandBuffer, stagingBuffer::Buffer_MianThread(), bufferMemory.Buffer(), elementCount, regions.get());
+        vkCmdCopyBuffer(
+            commandBuffer, stagingBuffer::Buffer_MianThread(), bufferMemory.Buffer(), elementCount,
+            regions.get()
+        );
         commandBuffer.End();
         graphicsBase::Plus().ExecuteCommandBuffer_Graphics(commandBuffer);
     }
@@ -296,8 +344,13 @@ class deviceLocalBuffer {
     void TransferData(const auto& data_src) const { TransferData(&data_src, sizeof data_src); }
 
     // vkCmdUpdateBuffer 将更新数据直接记录在commandBuffer中，它会影响commandBuffer大小
-    void CmdUpdateBuffer(VkCommandBuffer commandBuffer, const void* pData_src, VkDeviceSize size_Limited_to_65536, VkDeviceSize offset = 0) const {
-        vkCmdUpdateBuffer(commandBuffer, bufferMemory.Buffer(), offset, size_Limited_to_65536, pData_src);
+    void CmdUpdateBuffer(
+        VkCommandBuffer commandBuffer, const void* pData_src, VkDeviceSize size_Limited_to_65536,
+        VkDeviceSize offset = 0
+    ) const {
+        vkCmdUpdateBuffer(
+            commandBuffer, bufferMemory.Buffer(), offset, size_Limited_to_65536, pData_src
+        );
     }
     // 适用于从缓冲区开头更新连续的数据块，数据大小自动判断
     void CmdUpdateBuffer(VkCommandBuffer commandBuffer, const auto& data_src) const {
@@ -314,8 +367,9 @@ class deviceLocalBuffer {
         // 创建buffer，为buffer分配内存，绑定内存
         false || bufferMemory.CreateBuffer(bufferCreateInfo) ||
             // 优先尝试分配同时具有device local和host visible属性的内存,
-            bufferMemory.AllocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
-                bufferMemory.AllocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ||
+            bufferMemory.AllocateMemory(
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            ) && bufferMemory.AllocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ||
             bufferMemory.BindMemory();
     }
     void Recreate(VkDeviceSize size, VkBufferUsageFlags desiredUsages_Without_transfer_dst) {
@@ -328,10 +382,11 @@ class deviceLocalBuffer {
 
 // 为顶点缓冲区创建的封装类
 class vertexBuffer : public deviceLocalBuffer {
-   public:
+  public:
     vertexBuffer() = default;
     // 在创建缓冲区时默认指定了VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-    vertexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) : deviceLocalBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | otherUsages) {}
+    vertexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+        : deviceLocalBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | otherUsages) {}
     // Non-const function
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
         deviceLocalBuffer::Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | otherUsages);
@@ -342,9 +397,10 @@ class vertexBuffer : public deviceLocalBuffer {
 };
 
 class indexBuffer : public deviceLocalBuffer {
-   public:
+  public:
     indexBuffer() = default;
-    indexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) : deviceLocalBuffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | otherUsages) {}
+    indexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+        : deviceLocalBuffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | otherUsages) {}
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
         deviceLocalBuffer::Create(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | otherUsages);
     }
@@ -354,7 +410,7 @@ class indexBuffer : public deviceLocalBuffer {
 };
 
 class uniformBuffer : public deviceLocalBuffer {
-   public:
+  public:
     uniformBuffer() = default;
     uniformBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
         : deviceLocalBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | otherUsages) {}
@@ -366,15 +422,17 @@ class uniformBuffer : public deviceLocalBuffer {
     }
     // Static function
     static VkDeviceSize CalculateAlignedSize(VkDeviceSize dataSize) {
-        const VkDeviceSize& alignment = graphicsBase::Base().PhysicalDeviceProperties().limits.minUniformBufferOffsetAlignment;
+        const VkDeviceSize& alignment =
+            graphicsBase::Base().PhysicalDeviceProperties().limits.minUniformBufferOffsetAlignment;
         return dataSize + alignment - 1 & ~(alignment - 1);
     }
 };
 
 class storageBuffer : public deviceLocalBuffer {
-   public:
+  public:
     storageBuffer() = default;
-    storageBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) : deviceLocalBuffer(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {}
+    storageBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+        : deviceLocalBuffer(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {}
     // Non-const Function
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
         deviceLocalBuffer::Create(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | otherUsages);
@@ -384,7 +442,8 @@ class storageBuffer : public deviceLocalBuffer {
     }
     // Static Function
     static VkDeviceSize CalculateAlignedSize(VkDeviceSize dataSize) {
-        const VkDeviceSize& alignment = graphicsBase::Base().PhysicalDeviceProperties().limits.minStorageBufferOffsetAlignment;
+        const VkDeviceSize& alignment =
+            graphicsBase::Base().PhysicalDeviceProperties().limits.minStorageBufferOffsetAlignment;
         return dataSize + alignment - 1 & ~(alignment - 1);
     }
 };
@@ -399,7 +458,9 @@ struct graphicsPipelineCreateInfoPack {
      * VkVertexInputBindingDescription： 描述顶点缓冲区的绑定信息，包括绑定点、步幅和输入率
      * VkVertexInputAttributeDescription：描述顶点着色器的输入属性的信息，包括位置、格式和偏移量
      */
-    VkPipelineVertexInputStateCreateInfo vertexInputStateCi = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+    VkPipelineVertexInputStateCreateInfo vertexInputStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
+    };
     std::vector<VkVertexInputBindingDescription> vertexInputBindings;
     std::vector<VkVertexInputAttributeDescription> vertexInputAttributes;
 
@@ -407,19 +468,25 @@ struct graphicsPipelineCreateInfoPack {
      * Input Assembly
      * 主要用于指定输入的图元拓扑类型
      */
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCi = {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO
+    };
 
     /**
      * Tessellation
      * 细分状态用于在进行细分的管线中，指定控制点的数量
      */
-    VkPipelineTessellationStateCreateInfo tessellationStateCi = {VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO};
+    VkPipelineTessellationStateCreateInfo tessellationStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO
+    };
 
     /**
      * Viewport
      * 视口状态用于指定视口和裁剪范围
      */
-    VkPipelineViewportStateCreateInfo viewportStateCi = {VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
+    VkPipelineViewportStateCreateInfo viewportStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO
+    };
     std::vector<VkViewport> viewports;
     std::vector<VkRect2D> scissors;
     uint32_t dynamicViewportCount = 1;
@@ -429,20 +496,30 @@ struct graphicsPipelineCreateInfoPack {
      * Rasterization
      * 光栅化状态指定在光栅化阶段及该阶段前的操作
      */
-    VkPipelineRasterizationStateCreateInfo rasterizationStateCi = {VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+    VkPipelineRasterizationStateCreateInfo rasterizationStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO
+    };
 
     // Multisample
-    VkPipelineMultisampleStateCreateInfo multisampleStateCi = {VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
+    VkPipelineMultisampleStateCreateInfo multisampleStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
+    };
 
     // Depth & Stencil
-    VkPipelineDepthStencilStateCreateInfo depthStencilStateCi = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+    VkPipelineDepthStencilStateCreateInfo depthStencilStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
+    };
 
     // Color blend
-    VkPipelineColorBlendStateCreateInfo colorBlendStateCi = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+    VkPipelineColorBlendStateCreateInfo colorBlendStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO
+    };
     std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachmentStates;
 
     // Dynamic
-    VkPipelineDynamicStateCreateInfo dynamicStateCi = {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+    VkPipelineDynamicStateCreateInfo dynamicStateCi = {
+        VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO
+    };
     std::vector<VkDynamicState> dynamicStates;
 
     //------------------------------------------
@@ -486,14 +563,16 @@ struct graphicsPipelineCreateInfoPack {
         createInfo.stageCount = shaderStages.size();
         vertexInputStateCi.vertexBindingDescriptionCount = vertexInputBindings.size();
         vertexInputStateCi.vertexAttributeDescriptionCount = vertexInputAttributes.size();
-        viewportStateCi.viewportCount = viewports.size() ? static_cast<uint32_t>(viewports.size()) : dynamicViewportCount;
-        viewportStateCi.scissorCount = scissors.size() ? static_cast<uint32_t>(scissors.size()) : dynamicScissorCount;
+        viewportStateCi.viewportCount =
+            viewports.size() ? static_cast<uint32_t>(viewports.size()) : dynamicViewportCount;
+        viewportStateCi.scissorCount =
+            scissors.size() ? static_cast<uint32_t>(scissors.size()) : dynamicScissorCount;
         colorBlendStateCi.attachmentCount = colorBlendAttachmentStates.size();
         dynamicStateCi.dynamicStateCount = dynamicStates.size();
         UpdateAllArrayAddresses();
     }
 
-   private:
+  private:
     // 将创建信息的地址赋给basePipelineIndex中的相应成员
     void SetCreateInfos() {
         createInfo.pVertexInputState = &vertexInputStateCi;

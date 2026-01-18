@@ -167,12 +167,14 @@ constexpr formatInfo formatInfos_v1_0[] = {
     {3, 0, 4, 2},  // VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 = 123, //'E' is a 5-bit shared exponent
 
     {1, 2, 2, 1},  // VK_FORMAT_D16_UNORM = 124,
-    {1, 3, 4, 1},  // VK_FORMAT_X8_D24_UNORM_PACK32 = 125, //8 bits are unused therefore componentCount is 1, sizePerComponent is 3
+    {1, 3, 4, 1},  // VK_FORMAT_X8_D24_UNORM_PACK32 = 125, //8 bits are unused therefore
+                   // componentCount is 1, sizePerComponent is 3
     {1, 4, 4, 2},  // VK_FORMAT_D32_SFLOAT = 126,
     {1, 1, 1, 1},  // VK_FORMAT_S8_UINT = 127,
     {2, 0, 3, 1},  // VK_FORMAT_D16_UNORM_S8_UINT = 128,
     {2, 0, 4, 1},  // VK_FORMAT_D24_UNORM_S8_UINT = 129,
-    {2, 0, 8, 0},  // VK_FORMAT_D32_SFLOAT_S8_UINT = 130, //24 bits are unused if data is of linear tiling therefore sizePerPixel is 8
+    {2, 0, 8, 0},  // VK_FORMAT_D32_SFLOAT_S8_UINT = 130, //24 bits are unused if data is of linear
+                   // tiling therefore sizePerPixel is 8
 
     // 压缩格式
     {3, 0, 0, 1},  // VK_FORMAT_BC1_RGB_UNORM_BLOCK = 131,

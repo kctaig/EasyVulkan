@@ -12,11 +12,6 @@ using namespace vulkan;
 struct renderPassWithFramebuffers {
     renderPass renderPass;
     std::vector<framebuffer> framebuffers;
-
-    ~renderPassWithFramebuffers() {
-        renderPass.~renderPass();
-        framebuffers.clear();
-    }
 };
 
 // 创建一个直接渲染到交换链图像，且不做深度测试等任何测试的渲染通道和对应的帧缓冲
@@ -27,14 +22,15 @@ const auto& CreateRpwf_Screen() {
     VkAttachmentDescription attachmentDescription = {
         .format = graphicsBase::Base().SwapchainCreateInfo().imageFormat,  // 图像附件的格式
         .samples = VK_SAMPLE_COUNT_1_BIT,                                  // 每个像素的采样点数量
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,                             // 读取图像附件时，对颜色和深度进行的操作
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,                           // 存储颜色和深度值到图像附件时的操作
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,                        // 读取图像附件时的内存布局
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR                     // 存储渲染结果到图像附件时，需转换至的内存布局
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,       // 读取图像附件时，对颜色和深度进行的操作
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,     // 存储颜色和深度值到图像附件时的操作
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,  // 读取图像附件时的内存布局
+        .finalLayout =
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR  // 存储渲染结果到图像附件时，需转换至的内存布局
     };
     // 子通道描述：只有一个子通道，该子通道只使用一个颜色附件
     VkAttachmentReference attachmentReference = {
-        0,                                        // 附件对应VkRenderPassCreateInfo::pAttachments中元素的索引
+        0,  // 附件对应VkRenderPassCreateInfo::pAttachments中元素的索引
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL  // 该子通道内使用该附件时的内存布局
     };
     VkSubpassDescription subpassDescription = {
@@ -51,7 +47,8 @@ const auto& CreateRpwf_Screen() {
         .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // 目标管线阶段
         .srcAccessMask = 0,                                             // 源操作
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          // 目标操作
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT                  // 自Vulkan1.0以来可以指定VK_DEPENDENCY_BY_REGION_BIT
+        .dependencyFlags =
+            VK_DEPENDENCY_BY_REGION_BIT  // 自Vulkan1.0以来可以指定VK_DEPENDENCY_BY_REGION_BIT
     };
 
     // 渲染通道的创建信息
