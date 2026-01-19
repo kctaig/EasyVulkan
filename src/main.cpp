@@ -92,14 +92,20 @@ int main() {
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
 
     vertex vertices[] = {
-        {{.0f, -.5f}, {1, 0, 0, 1}},  // 红色
-        {{-.5f, .5f}, {0, 1, 0, 1}},  // 绿色
-        {{.5f, .5f}, {0, 0, 1, 1}}    // 蓝色
+        {{.0f, .0f}, {0, 0, 0, 1}},
+        {{-.5f, -.5f}, {1, 1, 0, 1}},
+        {{.5f, -.5f}, {1, 0, 0, 1}},
+        {{-.5f, .5f}, {0, 1, 0, 1}},
+        {{.5f, .5f}, {0, 0, 1, 1}}
     };
     // 创建缓冲区,分配物理内存并绑定
     vertexBuffer vertexBuffer(sizeof vertices);
     // 将数据从CPU传输到GPU缓冲区中的映射内存
     vertexBuffer.TransferData(vertices);
+
+    uint16_t indices[] = {0, 1, 2, 1, 2, 3};
+    indexBuffer indexBuffer(sizeof indices);
+    indexBuffer.TransferData(indices);
 
     // render loop
     while (!glfwWindowShouldClose(pWindow)) {
@@ -122,12 +128,14 @@ int main() {
         // 绑定顶点缓冲区，0号绑定点
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffer.Address(), &offset);
+        vkCmdBindIndexBuffer(commandBuffer, *indexBuffer.Address(), 0, VK_INDEX_TYPE_UINT16);
 
         // 绑定图形管线并绘制三角形
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
 
         // 绘制三角形：3个顶点，1个实例，起始顶点索引0，起始实例索引0
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 1, 0);
 
         // 结束渲染通道
         renderPass.CmdEnd(commandBuffer);
