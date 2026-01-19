@@ -436,8 +436,7 @@ struct graphicsPipelineCreateInfoPack {
      * VkVertexInputBindingDescription： 描述顶点缓冲区的绑定信息，包括绑定点、步幅和输入率
      * VkVertexInputAttributeDescription：描述顶点着色器的输入属性的信息，包括位置、格式和偏移量
      */
-    VkPipelineVertexInputStateCreateInfo vertexInputStateCi = {
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
+    VkPipelineVertexInputStateCreateInfo vertexInputStateCi = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
     };
     std::vector<VkVertexInputBindingDescription> vertexInputBindings;
     std::vector<VkVertexInputAttributeDescription> vertexInputAttributes;
@@ -477,8 +476,7 @@ struct graphicsPipelineCreateInfoPack {
     };
 
     // Multisample
-    VkPipelineMultisampleStateCreateInfo multisampleStateCi = {
-        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
+    VkPipelineMultisampleStateCreateInfo multisampleStateCi = {VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
     };
 
     // Depth & Stencil

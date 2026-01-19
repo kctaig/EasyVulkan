@@ -26,7 +26,7 @@ void CreateLayout() {
 }
 
 void CreatePipeline() {
-    static shaderModule vert("../shader/VertexBuffer.vert.spv");
+    static shaderModule vert("../shader/InstanceRendering.vert.spv");
     static shaderModule frag("../shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shaderStageCreateInfos_triangles[2] = {
         vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT), frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -45,7 +45,12 @@ void CreatePipeline() {
          */
         pipelineCiPack.vertexInputAttributes.emplace_back(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position));
         pipelineCiPack.vertexInputAttributes.emplace_back(1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex, color));
-        pipelineCiPack.viewports.emplace_back(0.f, 0.f, float(windowSize.width), float(windowSize.height), 0.f, 1.f);
+        // 数据来自1号顶点缓冲区，逐实例输入
+        pipelineCiPack.vertexInputBindings.emplace_back(1, sizeof(glm::vec2), VK_VERTEX_INPUT_RATE_INSTANCE);
+        pipelineCiPack.vertexInputAttributes.emplace_back(2, 1, VK_FORMAT_R32G32_SFLOAT, 0);
+        pipelineCiPack.viewports.emplace_back(
+            0.f, 0.f, static_cast<float>(windowSize.width), static_cast<float>(windowSize.height), 0.f, 1.f
+        );
         pipelineCiPack.scissors.emplace_back(VkOffset2D{}, windowSize);
         pipelineCiPack.multisampleStateCi.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         pipelineCiPack.colorBlendAttachmentStates.push_back({.colorWriteMask = 0b1111});
@@ -91,21 +96,12 @@ int main() {
 
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
 
-    vertex vertices[] = {
-        {{.0f, .0f}, {0, 0, 0, 1}},
-        {{-.5f, -.5f}, {1, 1, 0, 1}},
-        {{.5f, -.5f}, {1, 0, 0, 1}},
-        {{-.5f, .5f}, {0, 1, 0, 1}},
-        {{.5f, .5f}, {0, 0, 1, 1}}
-    };
-    // 创建缓冲区,分配物理内存并绑定
-    vertexBuffer vertexBuffer(sizeof vertices);
-    // 将数据从CPU传输到GPU缓冲区中的映射内存
-    vertexBuffer.TransferData(vertices);
-
-    uint16_t indices[] = {0, 1, 2, 1, 2, 3};
-    indexBuffer indexBuffer(sizeof indices);
-    indexBuffer.TransferData(indices);
+    vertex vertices[] = {{{.0f, -.5f}, {1, 0, 0, 1}}, {{-.5f, .5f}, {0, 1, 0, 1}}, {{.5f, .5f}, {0, 0, 1, 1}}};
+    glm::vec2 offsets[] = {{glm::vec2{.0f, .0f}}, {glm::vec2{-.5f, .0f}}, {glm::vec2{.5f, .0f}}};
+    vertexBuffer vertexBuffer_perVertex(sizeof vertices);
+    vertexBuffer_perVertex.TransferData(vertices);
+    vertexBuffer vertexBuffer_perInstance(sizeof offsets);
+    vertexBuffer_perInstance.TransferData(offsets);
 
     // render loop
     while (!glfwWindowShouldClose(pWindow)) {
@@ -126,16 +122,16 @@ int main() {
         renderPass.CmdBegin(commandBuffer, framebuffers[imageIndex], {{}, windowSize}, clearColor);
 
         // 绑定顶点缓冲区，0号绑定点
-        VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffer.Address(), &offset);
-        vkCmdBindIndexBuffer(commandBuffer, *indexBuffer.Address(), 0, VK_INDEX_TYPE_UINT16);
+        VkBuffer buffers[2] = {
+            static_cast<VkBuffer>(vertexBuffer_perVertex), static_cast<VkBuffer>(vertexBuffer_perInstance)
+        };
+        VkDeviceSize offsets[2] = {};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 2, buffers, offsets);
 
         // 绑定图形管线并绘制三角形
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
 
-        // 绘制三角形：3个顶点，1个实例，起始顶点索引0，起始实例索引0
-        // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-        vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 1, 0);
+        vkCmdDraw(commandBuffer, 3, 3, 0, 0);
 
         // 结束渲染通道
         renderPass.CmdEnd(commandBuffer);
