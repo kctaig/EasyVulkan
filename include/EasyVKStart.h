@@ -18,7 +18,7 @@
 #include <vector>
 
 // GLM
-#define GLM_FORCE_DEPTH_ZEWRO_TO_ONE
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -44,7 +44,7 @@ class arrayRef {
     // 从空参数构造，count为0
     arrayRef() = default;
     // 从单个对象构造，count为1
-    arrayRef(T& data) : pArray(&data), count(1) {}
+    explicit arrayRef(T& data) : pArray(&data), count(1) {}
     // 从底层内存连续的标准库容器构造
     template <typename R>
         requires std::ranges::contiguous_range<R> &&    // 连续内存范围
@@ -53,13 +53,13 @@ class arrayRef {
                      std::convertible_to<
                          std::ranges::range_reference_t<R>,
                          T>  // 元素类型可转换为T
-    arrayRef(R&& range) : pArray(std::ranges::data(range)), count(std::ranges::size(range)) {}
+    explicit arrayRef(R&& range) : pArray(std::ranges::data(range)), count(std::ranges::size(range)) {}
     // 从指针和计数构造
     arrayRef(T* pData, size_t elementCount) : pArray(pData), count(elementCount) {}
     // 若T带const修饰，兼容从对应的无const修饰版本的arrayRef构造
-    arrayRef(const arrayRef<std::remove_const_t<T>>& other) : pArray(other.Ponter()), count(other.Count()) {}
+    explicit arrayRef(const arrayRef<std::remove_const_t<T>>& other) : pArray(other.Ponter()), count(other.Count()) {}
 
-    // Gettter
+    // Getter
     T* Pointer() const { return pArray; }
     size_t Count() const { return count; }
 
@@ -68,7 +68,7 @@ class arrayRef {
     T* begin() const { return pArray; }
     T* end() const { return pArray + count; }
 
-    // Non-cosnt Function
+    // Non-const Function
     // 禁止复制/移动赋值(arrayRef旨在模拟“对数组的引用”，用处归根结底只是传参，故使其同C++引用的底层地址一样，防止初始化后被修改)
     arrayRef& operator=(const arrayRef&) = delete;
 };

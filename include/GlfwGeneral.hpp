@@ -15,7 +15,6 @@ inline auto windowTitle = "EasyVK";
 inline bool InitializeWindow(
     VkExtent2D size, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = true
 ) {
-    using namespace vulkan;
     if (!glfwInit()) {
         std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize GLFW!\n");
         return false;

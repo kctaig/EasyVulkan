@@ -36,7 +36,7 @@ class result_t {
 
   public:
     // 静态函数指针成员变量
-    static void (*callback_throw)(VkResult);
+    static inline void (*callback_throw)(VkResult);
     result_t(VkResult result) : result(result) {}
     // 防止重复处理错误：错误从一个对象传递到另一个对象时，原对象的错误状态被清除
     result_t(result_t&& other) noexcept : result(other.result) { other.result = VK_SUCCESS; }
@@ -53,7 +53,6 @@ class result_t {
         return localResult;
     }
 };
-inline void (*result_t::callback_throw)(VkResult);
 
 // 情况2：若抛弃返回值，让编译器发出警告
 #elif defined(VK_RESULT_NODISCARD)
@@ -74,7 +73,6 @@ using result_t = VkResult;
 class graphicsBasePlus;
 
 class graphicsBase {
-    static graphicsBase singleton;
     graphicsBasePlus* pPlus = nullptr;
 
     uint32_t apiVersion = VK_API_VERSION_1_0;
@@ -117,7 +115,6 @@ class graphicsBase {
     /******* private function *********/
 
     graphicsBase() = default;
-    graphicsBase(graphicsBase&&) = delete;
     ~graphicsBase() {
         if (!instance) { return; }
         if (device) {
@@ -134,18 +131,17 @@ class graphicsBase {
         }
         if (surface) { vkDestroySurfaceKHR(instance, surface, nullptr); }
         if (debugMessenger) {
-            PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUitlsMessenger =
-                reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
-                    vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT")
-                );
-            if (vkDestroyDebugUitlsMessenger) { vkDestroyDebugUitlsMessenger(instance, debugMessenger, nullptr); }
+            auto vkDestroyDebugUtilsMessenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+                vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT")
+            );
+            if (vkDestroyDebugUtilsMessenger) { vkDestroyDebugUtilsMessenger(instance, debugMessenger, nullptr); }
         }
         vkDestroyInstance(instance, nullptr);
     }
 
     // 添加实例层或扩展
     static void AddLayerOrExtension(std::vector<const char*>& container, const char* name) {
-        for (auto& i : container) {
+        for (const auto& i : container) {
             if (!strcmp(name, i)) return;
         }
         container.push_back(name);
@@ -154,7 +150,7 @@ class graphicsBase {
     result_t CreateDebugMessenger() {
         // 设置调试回调函数
         static PFN_vkDebugUtilsMessengerCallbackEXT DebugUtilsMessengerCallback =
-            [](VkDebugUtilsMessageSeverityFlagBitsEXT meeeageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+            [](VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) -> VkBool32 {
             outStream << std::format("{}\n\n", pCallbackData->pMessage);
             return VK_FALSE;
@@ -170,11 +166,10 @@ class graphicsBase {
             .pfnUserCallback = DebugUtilsMessengerCallback
         };
         // 获取函数指针
-        PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessenger =
-            reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
-                // Vulkan中扩展相关的函数大多通过vkGetInstanceProcAddr获取
-                vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")
-            );
+        auto vkCreateDebugUtilsMessenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+            // Vulkan中扩展相关的函数大多通过vkGetInstanceProcAddr获取
+            vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")
+        );
         // 创建调试信使
         if (vkCreateDebugUtilsMessenger) {
             VkResult result =
@@ -283,11 +278,19 @@ class graphicsBase {
     }
 
   public:
-    // 静态函数、用于访问单例
-    static graphicsBase& Base() { return singleton; }
-    static graphicsBasePlus& Plus() { return *singleton.pPlus; }
+    // 单例模式，禁止拷贝和移动构造
+    graphicsBase(const graphicsBase&) = delete;
+    graphicsBase& operator=(const graphicsBase&) = delete;
+    graphicsBase(graphicsBase&&) = delete;
+    graphicsBase& operator=(graphicsBase&&) = delete;
+    // 第一次调用时创建单例，线程安全
+    static graphicsBase& Base() {
+        static graphicsBase singleton;
+        return singleton;
+    }
+    static graphicsBasePlus& Plus() { return *Base().pPlus; }
     static void Plus(graphicsBasePlus& plus) {
-        if (!singleton.pPlus) { singleton.pPlus = &plus; }
+        if (!Base().pPlus) { Base().pPlus = &plus; }
     }
 
     // Getter
@@ -390,7 +393,7 @@ class graphicsBase {
     }
 
     // 创建Vulkan实例失败后，检查所需的层是否可用
-    result_t CheckInstanceLayers(std::span<const char*> layersToCheck) {
+    static result_t CheckInstanceLayers(std::span<const char*> layersToCheck) {
         uint32_t layerCount = 0;
         std::vector<VkLayerProperties> availableLayers;
         if (const VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr)) {
@@ -424,7 +427,7 @@ class graphicsBase {
         return VK_SUCCESS;
     }
 
-    result_t CheckInstanceExtensions(std::span<const char*> extensionsToCheck, const char* layerName = nullptr) const {
+    static result_t CheckInstanceExtensions(std::span<const char*> extensionsToCheck, const char* layerName = nullptr) {
         uint32_t extensionCount;
         std::vector<VkExtensionProperties> availableExtensions;
         if (const VkResult result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr)) {
@@ -619,20 +622,20 @@ class graphicsBase {
         bool formatIsAvailable = false;
         if (!surfaceFormat.format) {
             // 如果格式未指定，只匹配色彩空间，图像格式则选择第一个可用格式
-            for (auto& i : availableSurfaceFormats) {
-                if (i.colorSpace == surfaceFormat.colorSpace) {
-                    swapchainCreateInfo.imageFormat = i.format;
-                    swapchainCreateInfo.imageColorSpace = i.colorSpace;
+            for (auto& [format, colorSpace] : availableSurfaceFormats) {
+                if (colorSpace == surfaceFormat.colorSpace) {
+                    swapchainCreateInfo.imageFormat = format;
+                    swapchainCreateInfo.imageColorSpace = colorSpace;
                     formatIsAvailable = true;
                     break;
                 }
             }
         } else {
             // 否则匹配格式和色彩空间
-            for (auto& i : availableSurfaceFormats) {
-                if (i.format == surfaceFormat.format && i.colorSpace == surfaceFormat.colorSpace) {
-                    swapchainCreateInfo.imageFormat = i.format;
-                    swapchainCreateInfo.imageColorSpace = i.colorSpace;
+            for (auto& [format, colorSpace] : availableSurfaceFormats) {
+                if (format == surfaceFormat.format && colorSpace == surfaceFormat.colorSpace) {
+                    swapchainCreateInfo.imageFormat = format;
+                    swapchainCreateInfo.imageColorSpace = colorSpace;
                     formatIsAvailable = true;
                     break;
                 }
@@ -689,7 +692,7 @@ class graphicsBase {
         if (surfaceCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
             swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         } else {
-            outStream << std::format("[ graphicsBase ] WARNING\nVK_IMAGE_USAGE_TRANSFRE_DST_BIT isn't supported!\n");
+            outStream << std::format("[ graphicsBase ] WARNING\nVK_IMAGE_USAGE_TRANSFER_DST_BIT isn't supported!\n");
         }
         // 指定图像格式
         if (availableSurfaceFormats.empty()) {
@@ -782,12 +785,12 @@ class graphicsBase {
             return result;
         }
         ExecuteCallbacks(callbacks_destroySwapchain);
-        // 销毁旧的交换链图像视图
+        // 销毁旧交换链图像视图
         for (auto& i : swapchainImageViews) {
             if (i) { vkDestroyImageView(device, i, nullptr); }
         }
         swapchainImageViews.resize(0);
-        // 创建新的交换链
+        // 创建新交换链
         if ((result = CreateSwapchain_Internal())) { return result; }
         ExecuteCallbacks(callbacks_createSwapchain);
         return VK_SUCCESS;
@@ -795,7 +798,7 @@ class graphicsBase {
 
     // 该函数用于获取交换链图像索引到currentImageIndex
     result_t SwapImage(VkSemaphore semaphore_imageIsAvailable) {
-        // 摧毁旧的交换链
+        // 摧毁旧交换链
         if (swapchainCreateInfo.oldSwapchain && swapchainCreateInfo.oldSwapchain != swapchain) {
             vkDestroySwapchainKHR(device, swapchainCreateInfo.oldSwapchain, nullptr);
             swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
@@ -915,15 +918,14 @@ class graphicsBase {
         return PresentImage(presentInfo);
     }
 };
-inline graphicsBase graphicsBase::singleton;
 
 class fence {
     VkFence handle = VK_NULL_HANDLE;
 
   public:
     // fence() = default;
-    fence(VkFenceCreateInfo& createInfo) { Create(createInfo); }
-    fence(VkFenceCreateFlags flags = 0) { Create(flags); }
+    explicit fence(VkFenceCreateInfo& createInfo) { Create(createInfo); }
+    explicit fence(VkFenceCreateFlags flags = 0) { Create(flags); }
     fence(fence&& other) noexcept { MoveHandle; }
     ~fence() { DestroyHandleBy(vkDestroyFence); }
     // Getter
@@ -987,7 +989,7 @@ class semaphore {
     VkSemaphore handle = VK_NULL_HANDLE;
 
   public:
-    semaphore(VkSemaphoreCreateInfo& createInfo) { Create(createInfo); }
+    explicit semaphore(VkSemaphoreCreateInfo& createInfo) { Create(createInfo); }
     semaphore(/*VkSemaphoreCreateFlags flags*/) { Create(); }
     semaphore(semaphore&& other) noexcept { MoveHandle; }
     ~semaphore() { DestroyHandleBy(vkDestroySemaphore); }
@@ -1070,8 +1072,10 @@ class commandPool {
 
   public:
     commandPool() = default;
-    commandPool(VkCommandPoolCreateInfo& createInfo) { Create(createInfo); }
-    commandPool(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) { Create(queueFamilyIndex, flags); }
+    explicit commandPool(VkCommandPoolCreateInfo& createInfo) { Create(createInfo); }
+    explicit commandPool(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) {
+        Create(queueFamilyIndex, flags);
+    }
     commandPool(commandPool&& other) noexcept { MoveHandle; }
     ~commandPool() { DestroyHandleBy(vkDestroyCommandPool); }
     // Getter
@@ -1129,7 +1133,7 @@ class renderPass {
 
   public:
     renderPass() = default;
-    renderPass(VkRenderPassCreateInfo& createInfo) { Create(createInfo); }
+    explicit renderPass(VkRenderPassCreateInfo& createInfo) { Create(createInfo); }
     renderPass(renderPass&& other) noexcept { MoveHandle; }
     ~renderPass() { DestroyHandleBy(vkDestroyRenderPass); }
     // Getter
@@ -1158,10 +1162,10 @@ class renderPass {
         };
         vkCmdBeginRenderPass(commandBuffer, &beginInfo, subpassContents);
     }
-    void CmdNext(VkCommandBuffer commandBuffer, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) const {
+    static void CmdNext(VkCommandBuffer commandBuffer, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE) {
         vkCmdNextSubpass(commandBuffer, subpassContents);
     }
-    void CmdEnd(VkCommandBuffer commandBuffer) const { vkCmdEndRenderPass(commandBuffer); }
+    static void CmdEnd(VkCommandBuffer commandBuffer) { vkCmdEndRenderPass(commandBuffer); }
     // Non-const function
     result_t Create(VkRenderPassCreateInfo& createInfo) {
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1180,7 +1184,7 @@ class framebuffer {
 
   public:
     framebuffer() = default;
-    framebuffer(VkFramebufferCreateInfo& createInfo) { Create(createInfo); }
+    explicit framebuffer(VkFramebufferCreateInfo& createInfo) { Create(createInfo); }
     framebuffer(framebuffer&& other) noexcept { MoveHandle; }
     ~framebuffer() { DestroyHandleBy(vkDestroyFramebuffer); }
     // Getter
@@ -1204,8 +1208,8 @@ class shaderModule {
 
   public:
     shaderModule() = default;
-    shaderModule(VkShaderModuleCreateInfo& createInfo) { Create(createInfo); }
-    shaderModule(const char* filepath /*VkShaderModuleCreateFlags flags*/) { Create(filepath); }
+    explicit shaderModule(VkShaderModuleCreateInfo& createInfo) { Create(createInfo); }
+    explicit shaderModule(const char* filepath /*VkShaderModuleCreateFlags flags*/) { Create(filepath); }
     shaderModule(size_t codeSize, const uint32_t* pCode /*VkShaderModuleCreateFlags flags*/) {
         Create(codeSize, pCode);
     }
@@ -1289,8 +1293,8 @@ class pipeline {
 
   public:
     pipeline() = default;
-    pipeline(VkGraphicsPipelineCreateInfo& createInfo) { Create(createInfo); }
-    pipeline(VkComputePipelineCreateInfo& createInfo) { Create(createInfo); }
+    explicit pipeline(VkGraphicsPipelineCreateInfo& createInfo) { Create(createInfo); }
+    explicit pipeline(VkComputePipelineCreateInfo& createInfo) { Create(createInfo); }
     pipeline(pipeline&& other) noexcept { MoveHandle; }
     ~pipeline() { DestroyHandleBy(vkDestroyPipeline); }
     // Getter
@@ -1370,7 +1374,7 @@ class deviceMemory {
 
   public:
     deviceMemory() = default;
-    deviceMemory(VkMemoryAllocateInfo& allocateInfo) { Allocate(allocateInfo); }
+    explicit deviceMemory(VkMemoryAllocateInfo& allocateInfo) { Allocate(allocateInfo); }
     deviceMemory(deviceMemory&& other) noexcept {
         MoveHandle;
         allocationSize = other.allocationSize;
@@ -1391,7 +1395,7 @@ class deviceMemory {
     // Const function
     // 映射host visible的内存区,在对其进行映射（map）后，可以由CPU侧对其进行直接读写
     result_t MapMemory(void*& pData, VkDeviceSize size, VkDeviceSize offset = 0) const {
-        VkDeviceSize inverseDeltaOffset;
+        VkDeviceSize inverseDeltaOffset{};
         if (!(memoryProperties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             inverseDeltaOffset = AdjustNonCoherentMemoryRange(size, offset);
         }
@@ -1490,7 +1494,7 @@ class buffer {
 
   public:
     buffer() = default;
-    buffer(VkBufferCreateInfo& createInfo) { Create(createInfo); }
+    explicit buffer(VkBufferCreateInfo& createInfo) { Create(createInfo); }
     buffer(buffer&& other) noexcept { MoveHandle; }
     ~buffer() { DestroyHandleBy(vkDestroyBuffer); }
     // Getter
@@ -1541,7 +1545,6 @@ class buffer {
     }
 };
 
-//
 class bufferMemory : buffer, deviceMemory {
   public:
     bufferMemory() = default;
@@ -1599,7 +1602,7 @@ class bufferView {
 
   public:
     bufferView() = default;
-    bufferView(VkBufferViewCreateInfo& createInfo) { Create(createInfo); }
+    explicit bufferView(VkBufferViewCreateInfo& createInfo) { Create(createInfo); }
     bufferView(VkBuffer buffer, VkFormat format, VkDeviceSize offset = 0, VkDeviceSize range = 0) {
         Create(buffer, format, offset, range);
     }
@@ -1636,7 +1639,7 @@ class image {
 
   public:
     image() = default;
-    image(VkImageCreateInfo& createInfo) { Create(createInfo); }
+    explicit image(VkImageCreateInfo& createInfo) { Create(createInfo); }
     image(image&& other) noexcept { MoveHandle; }
     ~image() { DestroyHandleBy(vkDestroyImage); }
     // Getter
@@ -1738,7 +1741,7 @@ class imageView {
 
   public:
     imageView() = default;
-    imageView(VkImageViewCreateInfo& createInfo) { Create(createInfo); }
+    explicit imageView(VkImageViewCreateInfo& createInfo) { Create(createInfo); }
     imageView(
         VkImage image, VkImageViewType viewType, VkFormat format, const VkImageSubresourceRange& subresourceRange,
         VkImageViewCreateFlags flags = 0

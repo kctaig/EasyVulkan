@@ -3,7 +3,7 @@
 #include "VKBase+.h"
 
 using namespace vulkan;
-const VkExtent2D& windowSize = graphicsBase::Base().SwapchainCreateInfo().imageExtent;
+inline const VkExtent2D& windowSize = graphicsBase::Base().SwapchainCreateInfo().imageExtent;
 
 namespace easyVulkan {
 
@@ -15,7 +15,7 @@ struct renderPassWithFramebuffers {
 };
 
 // 创建一个直接渲染到交换链图像，且不做深度测试等任何测试的渲染通道和对应的帧缓冲
-const auto& CreateRpwf_Screen() {
+inline const auto& CreateRpwf_Screen() {
     static renderPassWithFramebuffers rpwf;
 
     // 描述图像附件，这里描述的是交换链图像

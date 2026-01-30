@@ -13,20 +13,17 @@ class graphicsBasePlus {
     commandBuffer commandBuffer_transfer{};  // 从commandPool_graphics分配
     commandBuffer commandBuffer_presentation{};
 
-    // 唯一实例
-    static graphicsBasePlus singleton;
-
     // 私有防止外部创建
     graphicsBasePlus() {
         auto Initialize = [] {
             if (graphicsBase::Base().QueueFamilyIndex_Graphics() != VK_QUEUE_FAMILY_IGNORED) {
-                singleton.commandPool_graphics.Create(
+                Singleton().commandPool_graphics.Create(
                     graphicsBase::Base().QueueFamilyIndex_Graphics(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
                 );
-                singleton.commandPool_graphics.AllocateBuffers(singleton.commandBuffer_transfer);
+                Singleton().commandPool_graphics.AllocateBuffers(arrayRef(Singleton().commandBuffer_transfer));
             }
             if (graphicsBase::Base().QueueFamilyIndex_Compute() != VK_QUEUE_FAMILY_IGNORED) {
-                singleton.commandPool_compute.Create(
+                Singleton().commandPool_compute.Create(
                     graphicsBase::Base().QueueFamilyIndex_Compute(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
                 );
             }
@@ -34,33 +31,40 @@ class graphicsBasePlus {
                 graphicsBase::Base().QueueFamilyIndex_Presentation() !=
                     graphicsBase::Base().QueueFamilyIndex_Graphics() &&
                 graphicsBase::Base().SwapchainCreateInfo().imageSharingMode == VK_SHARING_MODE_EXCLUSIVE) {
-                singleton.commandPool_presentation.Create(
+                Singleton().commandPool_presentation.Create(
                     graphicsBase::Base().QueueFamilyIndex_Presentation(),
                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
                 );
-                singleton.commandPool_presentation.AllocateBuffers(singleton.commandBuffer_presentation);
+                Singleton().commandPool_presentation.AllocateBuffers(arrayRef(Singleton().commandBuffer_presentation));
             }
-            for (size_t i = 0; i < std::size(singleton.formatProperties); i++) {
+            for (size_t i = 0; i < std::size(Singleton().formatProperties); i++) {
                 vkGetPhysicalDeviceFormatProperties(
-                    graphicsBase::Base().PhysicalDevice(), VkFormat(i), &singleton.formatProperties[i]
+                    graphicsBase::Base().PhysicalDevice(), VkFormat(i), &Singleton().formatProperties[i]
                 );
             }
         };
 
         auto CleanUp = [] {
-            singleton.commandPool_graphics.~commandPool();
-            singleton.commandPool_presentation.~commandPool();
-            singleton.commandPool_compute.~commandPool();
+            Singleton().commandPool_graphics.~commandPool();
+            Singleton().commandPool_presentation.~commandPool();
+            Singleton().commandPool_compute.~commandPool();
         };
 
-        graphicsBase::Plus(singleton);
+        graphicsBase::Plus(Singleton());
         graphicsBase::Base().AddCallback_CreateDevice(Initialize);
         graphicsBase::Base().AddCallback_DestroyDevice(CleanUp);
     }
-    graphicsBasePlus(graphicsBasePlus&&) = delete;
     ~graphicsBasePlus() = default;
 
   public:
+    graphicsBasePlus(const graphicsBasePlus&) = delete;
+    graphicsBasePlus& operator=(const graphicsBasePlus&) = delete;
+    graphicsBasePlus(graphicsBasePlus&&) = delete;
+    graphicsBasePlus& operator=(graphicsBasePlus&&) = delete;
+    static graphicsBasePlus& Singleton() {
+        static graphicsBasePlus singleton;
+        return singleton;
+    }
     // Getter
     const commandPool& CommandPool_Graphics() const { return commandPool_graphics; }
     const commandPool& CommandPool_Compute() const { return commandPool_compute; }
@@ -80,7 +84,7 @@ class graphicsBasePlus {
     }
 
     // Const Function
-    result_t ExecuteCommandBuffer_Graphics(VkCommandBuffer commandBuffer) const {
+    static result_t ExecuteCommandBuffer_Graphics(VkCommandBuffer commandBuffer) {
         fence fence;
         VkSubmitInfo submitInfo = {.commandBufferCount = 1, .pCommandBuffers = &commandBuffer};
         VkResult result = graphicsBase::Base().SubmitCommandBuffer_Graphics(submitInfo, fence);
@@ -106,7 +110,7 @@ class graphicsBasePlus {
     //                                                                  fence);
     // }
 };
-inline graphicsBasePlus graphicsBasePlus::singleton;
+// inline graphicsBasePlus graphicsBasePlus::singleton;
 
 constexpr formatInfo FormatInfo(VkFormat format) {
 #ifndef NDEBUG
@@ -160,9 +164,9 @@ class stagingBuffer {
 
   public:
     stagingBuffer() = default;
-    stagingBuffer(VkDeviceSize size) { Expand(size); }
+    explicit stagingBuffer(VkDeviceSize size) { Expand(size); }
     // Getter
-    operator VkBuffer() const { return bufferMemory.Buffer(); }
+    explicit operator VkBuffer() const { return bufferMemory.Buffer(); }
     const VkBuffer* Address() const { return bufferMemory.AddressOfBuffer(); }
     VkDeviceSize AllocateSize() const { return bufferMemory.AllocationSize(); }
     VkImage AliasedImage() const { return aliasedImage; }
@@ -236,7 +240,7 @@ class stagingBuffer {
         return aliasedImage;
     }
     // Static function
-    static VkBuffer Buffer_MianThread() { return stagingBuffer_mainThread.Get(); }
+    static VkBuffer Buffer_MianThread() { return static_cast<VkBuffer>(stagingBuffer_mainThread.Get()); }
     static void Expand_MainThread(VkDeviceSize size) { stagingBuffer_mainThread.Get().Expand(size); }
     static void Release_MainThread() { stagingBuffer_mainThread.Get().Release(); }
     static void* MapMemory_MainThread(VkDeviceSize size) { return stagingBuffer_mainThread.Get().MapMemory(size); }
@@ -363,7 +367,7 @@ class vertexBuffer : public deviceLocalBuffer {
   public:
     vertexBuffer() = default;
     // 在创建缓冲区时默认指定了VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-    vertexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+    explicit vertexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
         : deviceLocalBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | otherUsages) {}
     // Non-const function
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
@@ -377,7 +381,7 @@ class vertexBuffer : public deviceLocalBuffer {
 class indexBuffer : public deviceLocalBuffer {
   public:
     indexBuffer() = default;
-    indexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+    explicit indexBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
         : deviceLocalBuffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | otherUsages) {}
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
         deviceLocalBuffer::Create(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | otherUsages);
@@ -390,7 +394,7 @@ class indexBuffer : public deviceLocalBuffer {
 class uniformBuffer : public deviceLocalBuffer {
   public:
     uniformBuffer() = default;
-    uniformBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
+    explicit uniformBuffer(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0)
         : deviceLocalBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | otherUsages) {}
     void Create(VkDeviceSize size, VkBufferUsageFlags otherUsages = 0) {
         deviceLocalBuffer::Create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | otherUsages);

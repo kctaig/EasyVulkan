@@ -86,7 +86,7 @@ int main() {
      * 因此，semaphore_imageIsAvailable 和 semaphore_renderingIsOver 不能共用一个索引
      */
     struct PerFrame {
-        fence frameFence = {VK_FENCE_CREATE_SIGNALED_BIT};  // 确保每个帧在第一次提交时不会被阻塞
+        fence frameFence{VK_FENCE_CREATE_SIGNALED_BIT};  // 确保每个帧在第一次提交时不会被阻塞
         semaphore semaphore_imageIsAvailable;
         commandBuffer commandBuffer;
     };
@@ -96,7 +96,7 @@ int main() {
     commandPool commandPool(
         graphicsBase::Base().QueueFamilyIndex_Graphics(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
     );
-    for (auto& frame : perFrame) { commandPool.AllocateBuffers(frame.commandBuffer); }
+    for (auto& frame : perFrame) { commandPool.AllocateBuffers(arrayRef(frame.commandBuffer)); }
     uint32_t currentFrame = 0;
 
     VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
@@ -130,7 +130,9 @@ int main() {
 
         commandBuffer.Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         // 开始渲染通道
-        renderPass.CmdBegin(commandBuffer, framebuffers[imageIndex], {{}, windowSize}, clearColor);
+        renderPass.CmdBegin(
+            commandBuffer, framebuffers[imageIndex], {{}, windowSize}, arrayRef<const VkClearValue>(clearColor)
+        );
 
         // 绑定顶点缓冲区
         VkDeviceSize offset = 0;
