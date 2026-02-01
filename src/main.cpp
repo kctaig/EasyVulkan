@@ -10,6 +10,7 @@ struct vertex {
 
 pipelineLayout pipelineLayout_triangle;
 pipeline pipeline_triangle;
+descriptorSetLayout descriptorSetLayout_triangle;
 
 /**
  * 定义一个静态变量存储easyVulkan::CreateRpwf_Screen()返回值，确保只创建一次
@@ -21,23 +22,37 @@ const auto& RenderPassAndFramebuffers() {
 }
 
 void CreateLayout() {
-    VkPushConstantRange pushConstantRange = {
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        24,
+    VkDescriptorSetLayoutBinding descriptorSetLayoutBinding_trianglePosition = {
+        .binding = 0,                                         // 描述符被绑定到0号binding
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,  // 类型为uniform缓冲区
+        .descriptorCount = 1,                                 // 个数是1个
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT              // 在顶点着色器阶段读取uniform缓冲区
     };
-    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pushConstantRange,
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo_triangle = {
+        .bindingCount = 1, .pBindings = &descriptorSetLayoutBinding_trianglePosition
+    };
+    descriptorSetLayout_triangle.Create(descriptorSetLayoutCreateInfo_triangle);
+
+    // VkPushConstantRange pushConstantRange = {
+    //     VK_SHADER_STAGE_VERTEX_BIT,
+    //     0,
+    //     24,
+    // };
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{// .pushConstantRangeCount = 1,
+                                                        // .pPushConstantRanges = &pushConstantRange,
+                                                        .setLayoutCount = 1,
+                                                        .pSetLayouts = descriptorSetLayout_triangle.Address()
     };
     pipelineLayout_triangle.Create(pipelineLayoutCreateInfo);
 }
 
 void CreatePipeline() {
-    static shaderModule vert("../shader/PushConstant.vert.spv");
+    static shaderModule vert("../shader/UniformBuffer.vert.spv");
     static shaderModule frag("../shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shaderStageCreateInfos_triangles[2] = {
-        vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT), frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT)
+        vert.StageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT),
+        frag.StageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT),
     };
     auto Create = [] {
         graphicsPipelineCreateInfoPack pipelineCiPack;
@@ -78,6 +93,40 @@ int main() {
     CreateLayout();
     CreatePipeline();
 
+    VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
+
+    glm::vec2 uniform_positions[] = {
+        {.0f, .0f}, {}, {-.5f, .0f}, {}, {.5f, .0f}, {},
+    };
+    uniformBuffer uniformBuffer(sizeof uniform_positions);
+    uniformBuffer.TransferData(uniform_positions);
+
+    vertex vertices[] = {
+        {{.0f, -.5f}, {1, 0, 0, 1}},
+        {{-.5f, .5f}, {0, 1, 0, 1}},
+        {{.5f, .5f}, {0, 0, 1, 1}},
+    };
+    vertexBuffer vertexBuffer(sizeof vertices);
+    vertexBuffer.TransferData(vertices);
+
+    // 创建描述符集
+    VkDescriptorPoolSize descriptorPoolSizes[] = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}};
+    descriptorPool descriptorPool(1, arrayRef<const VkDescriptorPoolSize>(descriptorPoolSizes));
+    // 分配描述符集
+    descriptorSet descriptorSet_trianglePosition;
+    descriptorPool.AllocateSets(
+        arrayRef(descriptorSet_trianglePosition), arrayRef<const descriptorSetLayout>(descriptorSetLayout_triangle)
+    );
+    // 将uniform缓冲区信息写入描述符集
+    VkDescriptorBufferInfo bufferInfo = {
+        .buffer = static_cast<VkBuffer>(uniformBuffer),
+        .offset = 0,
+        .range = sizeof uniform_positions,
+    };
+    descriptorSet_trianglePosition.Write(
+        arrayRef<const VkDescriptorBufferInfo>(bufferInfo), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+    );
+
     /**
      * semaphore_imageIsAvailable 是 per-frame 的：因为每次 acquire 都是新请求。
      * 表示：通知 GPU 交换链中的某一张图像已经准备好，可以开始渲染了
@@ -98,21 +147,6 @@ int main() {
     );
     for (auto& frame : perFrame) { commandPool.AllocateBuffers(arrayRef(frame.commandBuffer)); }
     uint32_t currentFrame = 0;
-
-    VkClearValue clearColor = {.color = {1.f, 0.f, 0.f, 1.f}};
-
-    glm::vec2 pushConstants[] = {
-        {.0f, .0f},
-        {-.5f, .0f},
-        {.5f, .0f},
-    };
-    vertex vertices[] = {
-        {{.0f, -.5f}, {1, 0, 0, 1}},
-        {{-.5f, .5f}, {0, 1, 0, 1}},
-        {{.5f, .5f}, {0, 0, 1, 1}},
-    };
-    vertexBuffer vertexBuffer(sizeof vertices);
-    vertexBuffer.TransferData(vertices);
 
     // render loop
     while (!glfwWindowShouldClose(pWindow)) {
@@ -142,9 +176,17 @@ int main() {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_triangle);
 
         // 推送常量数据到顶点着色器
-        vkCmdPushConstants(
-            commandBuffer, pipelineLayout_triangle, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, pushConstants
+        // vkCmdPushConstants(
+        //     commandBuffer, pipelineLayout_triangle, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants,
+        //     pushConstants
+        // );
+
+        // 绑定描述符集
+        vkCmdBindDescriptorSets(
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_triangle, 0, 1,
+            descriptorSet_trianglePosition.Address(), 0, nullptr
         );
+
         vkCmdDraw(commandBuffer, 3, 3, 0, 0);
 
         // 结束渲染通道

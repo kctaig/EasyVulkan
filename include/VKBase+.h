@@ -267,7 +267,7 @@ class deviceLocalBuffer {
         Create(size, desiredUsages_Without_transfer_dst);
     }
     // Getter
-    explicit operator VkBuffer() const { return bufferMemory.Buffer(); }
+    explicit operator VkBuffer() const { return bufferMemory.Buffer(); } // 显示转换函数
     const VkBuffer* Address() const { return bufferMemory.AddressOfBuffer(); }
     VkDeviceSize AllocateSize() const { return bufferMemory.AllocationSize(); }
     // Const function

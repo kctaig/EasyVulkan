@@ -1778,4 +1778,187 @@ class imageView {
         return Create(createInfo);
     }
 };
+
+class descriptorSetLayout {
+    VkDescriptorSetLayout handle = VK_NULL_HANDLE;
+
+  public:
+    descriptorSetLayout() = default;
+    explicit descriptorSetLayout(VkDescriptorSetLayoutCreateInfo& createInfo) { Create(createInfo); }
+    descriptorSetLayout(descriptorSetLayout&& other) noexcept { MoveHandle; }
+    ~descriptorSetLayout() { DestroyHandleBy(vkDestroyDescriptorSetLayout); }
+    // Getter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Non-const function
+    result_t Create(VkDescriptorSetLayoutCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        VkResult result = vkCreateDescriptorSetLayout(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result) {
+            outStream << std::format(
+                "[ descriptorSetLayout ] ERROR\nFailed to create a descriptor set layout!\nError code: {}\n",
+                int32_t(result)
+            );
+        }
+        return result;
+    }
+};
+
+class descriptorSet {
+    friend class descriptorPool;
+    VkDescriptorSet handle = VK_NULL_HANDLE;
+
+  public:
+    descriptorSet() = default;
+    descriptorSet(descriptorSet&& other) noexcept : handle(other.handle) { MoveHandle; }
+    // Getter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Const function
+    void Write(
+        arrayRef<const VkDescriptorImageInfo> descriptorInfos, VkDescriptorType descriptorType, uint32_t dstBinding = 0,
+        uint32_t dstArrayElement = 0
+    ) const {
+        VkWriteDescriptorSet writeDescriptorSet = {
+            .dstSet = handle,
+            .dstBinding = dstBinding,
+            .dstArrayElement = dstArrayElement,
+            .descriptorCount = static_cast<uint32_t>(descriptorInfos.Count()),
+            .descriptorType = descriptorType,
+            .pImageInfo = descriptorInfos.Pointer(),
+        };
+        Update(arrayRef(writeDescriptorSet));
+    }
+    void Write(
+        arrayRef<const VkDescriptorBufferInfo> descriptorInfos, VkDescriptorType descriptorType,
+        uint32_t dstBinding = 0, uint32_t dstArrayElement = 0
+    ) const {
+        VkWriteDescriptorSet writeDescriptorSet = {
+            .dstSet = handle,
+            .dstBinding = dstBinding,
+            .dstArrayElement = dstArrayElement,
+            .descriptorCount = static_cast<uint32_t>(descriptorInfos.Count()),
+            .descriptorType = descriptorType,
+            .pBufferInfo = descriptorInfos.Pointer(),
+        };
+        Update(arrayRef(writeDescriptorSet));
+    }
+    void Write(
+        arrayRef<const VkBufferView> descriptorInfos, VkDescriptorType descriptorType, uint32_t dstBinding = 0,
+        uint32_t dstArrayElement = 0
+    ) const {
+        VkWriteDescriptorSet writeDescriptorSet = {
+            .dstSet = handle,
+            .dstBinding = dstBinding,
+            .dstArrayElement = dstArrayElement,
+            .descriptorCount = static_cast<uint32_t>(descriptorInfos.Count()),
+            .descriptorType = descriptorType,
+            .pTexelBufferView = descriptorInfos.Pointer(),
+        };
+        Update(arrayRef(writeDescriptorSet));
+    }
+    void Write(
+        arrayRef<const bufferView> descriptorInfos, VkDescriptorType descriptorType, uint32_t dstBinding = 0,
+        uint32_t dstArrayElement = 0
+    ) const {
+        Write({descriptorInfos[0].Address(), descriptorInfos.Count()}, descriptorType, dstBinding, dstArrayElement);
+    }
+    // Static function
+    static void Update(arrayRef<VkWriteDescriptorSet> writes, arrayRef<VkCopyDescriptorSet> copies = {}) {
+        for (auto& i : writes) { i.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET; }
+        for (auto& i : copies) { i.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET; }
+        vkUpdateDescriptorSets(
+            graphicsBase::Base().Device(), writes.Count(), writes.Pointer(), copies.Count(), copies.Pointer()
+        );
+    }
+};
+
+class descriptorPool {
+    VkDescriptorPool handle = VK_NULL_HANDLE;
+
+  public:
+    descriptorPool() = default;
+    explicit descriptorPool(VkDescriptorPoolCreateInfo& createInfo) { Create(createInfo); }
+    explicit descriptorPool(
+        uint32_t maxSetCount, arrayRef<const VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags = 0
+    ) {
+        Create(maxSetCount, poolSizes, flags);
+    }
+    descriptorPool(descriptorPool&& other) noexcept { MoveHandle; }
+    ~descriptorPool() { DestroyHandleBy(vkDestroyDescriptorPool); }
+    // Getter
+    DefineHandleTypeOperator;
+    DefineAddressFunction;
+    // Const function
+    result_t AllocateSets(arrayRef<VkDescriptorSet> sets, arrayRef<const VkDescriptorSetLayout> setLayouts) const {
+        if (sets.Count() != setLayouts.Count()) {
+            if (sets.Count() < setLayouts.Count()) {
+                outStream << std::format(
+                    "[ descriptorPool ] ERROR\nFor each descriptor set, must provide a corresponding layout!\n"
+                );
+                return VK_RESULT_MAX_ENUM;  // 没有合适的错误代码，别用VK_ERROR_UNKNOWN
+            } else {
+                outStream << std::format("[ descriptorPool ] WARNING\nProvided layouts are more than sets!\n");
+            }
+        }
+        VkDescriptorSetAllocateInfo allocateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = handle,
+            .descriptorSetCount = static_cast<uint32_t>(sets.Count()),
+            .pSetLayouts = setLayouts.Pointer()
+        };
+        VkResult result = vkAllocateDescriptorSets(graphicsBase::Base().Device(), &allocateInfo, sets.Pointer());
+        if (result) {
+            outStream << std::format(
+                "[ descriptorPool ] ERROR\nFailed to allocate descriptor sets!\nError code: {}\n", int32_t(result)
+            );
+        }
+        return result;
+    }
+    result_t AllocateSets(arrayRef<VkDescriptorSet> sets, arrayRef<const descriptorSetLayout> setLayouts) const {
+        return AllocateSets(
+            arrayRef<VkDescriptorSet>(sets),
+            arrayRef<const VkDescriptorSetLayout>{setLayouts[0].Address(), setLayouts.Count()}
+        );
+    }
+    result_t AllocateSets(arrayRef<descriptorSet> sets, arrayRef<const VkDescriptorSetLayout> setLayouts) const {
+        return AllocateSets(
+            arrayRef<VkDescriptorSet>{&sets[0].handle, sets.Count()}, arrayRef<const VkDescriptorSetLayout>(setLayouts)
+        );
+    }
+    result_t AllocateSets(arrayRef<descriptorSet> sets, arrayRef<const descriptorSetLayout> setLayouts) const {
+        return AllocateSets(
+            arrayRef<VkDescriptorSet>{&sets[0].handle, sets.Count()},
+            arrayRef<const VkDescriptorSetLayout>{setLayouts[0].Address(), setLayouts.Count()}
+        );
+    }
+    result_t FreeSets(arrayRef<VkDescriptorSet> sets) const {
+        VkResult result = vkFreeDescriptorSets(graphicsBase::Base().Device(), handle, sets.Count(), sets.Pointer());
+        memset(sets.Pointer(), 0, sets.Count() * sizeof(VkDescriptorSet));
+        return result;  // Though vkFreeDescriptorSets(...) can only return VK_SUCCESS
+    }
+    result_t FreeSets(arrayRef<descriptorSet> sets) const { return FreeSets({&sets[0].handle, sets.Count()}); }
+    // Non-const function
+    result_t Create(VkDescriptorPoolCreateInfo& createInfo) {
+        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        VkResult result = vkCreateDescriptorPool(graphicsBase::Base().Device(), &createInfo, nullptr, &handle);
+        if (result)
+            outStream << std::format(
+                "[ descriptorPool ] ERROR\nFailed to create a descriptor pool!\nError code: {}\n", int32_t(result)
+            );
+        return result;
+    }
+    result_t Create(
+        uint32_t maxSetCount, arrayRef<const VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags = 0
+    ) {
+        VkDescriptorPoolCreateInfo createInfo = {
+            .flags = flags,
+            .maxSets = maxSetCount,
+            .poolSizeCount = uint32_t(poolSizes.Count()),
+            .pPoolSizes = poolSizes.Pointer()
+        };
+        return Create(createInfo);
+    }
+};
+
 }  // namespace vulkan
